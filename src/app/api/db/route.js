@@ -16,14 +16,8 @@ export async function POST(request) {
             case 'getPersonnelById':
                 result = await dbOps.getPersonnelById(params.id);
                 break;
-            case 'updatePersonnel':
-                result = await dbOps.updatePersonnel(params.id, params.data);
-                break;
             case 'createPersonnel':
-                result = await dbOps.createPersonnel(params.data);
-                break;
-            case 'deletePersonnel':
-                result = await dbOps.deletePersonnel(params.id);
+                result = await dbOps.addPersonnel(params.id, params.data);
                 break;
             default:
                 return NextResponse.json(

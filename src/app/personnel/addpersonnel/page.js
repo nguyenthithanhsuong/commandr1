@@ -1,15 +1,21 @@
 "use client"
 
 import React, { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation"; // Import useSearchParams
+import { useRouter, useSearchParams } from "next/navigation";
 import Button from "../../components/button/button";
 
 export default function AddPersonnelPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     
-    const [isLoading, setIsLoading] = useState(true);
-    const [user, setUser] = useState(null);
+    // NOTE: This ID should typically come from a session/auth context 
+    // for the user performing the add operation (the Manager/HR).
+    // I'll use a placeholder '1' as a temporary ManagerID.
+    const managerId = '1'; 
+
+    const [isLoading, setIsLoading] = useState(false); // Changed default to false
+    const [user, setUser] = useState(null); // Keep if needed for context, but not essential for this form
+
     const [formData, setFormData] = useState({
         name: '',
         dateofbirth: '',
@@ -17,14 +23,15 @@ export default function AddPersonnelPage() {
         phonenumber: '',
         position: '',
         department: '',
-        employdate: new Date().toISOString().substring(0, 10), // Default to today
-        managerid: '', // Optional
-        isactive: true,
+        employdate: new Date().toISOString().substring(0, 10), // Default to today's date
+        isactive: true, // Used in the backend logic
+        // *** ADDED: Fields required for Account table insertion (in dbOperations) ***
+        email: '',
+        password: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
 
-    // Field definitions for easier rendering
     const fields = [
         { label: "Full Name", name: "name", type: "text", required: true },
         { label: "Date of Birth", name: "dateofbirth", type: "date", required: true },
@@ -33,8 +40,9 @@ export default function AddPersonnelPage() {
         { label: "Position", name: "position", type: "text", required: true },
         { label: "Department", name: "department", type: "text", required: true },
         { label: "Employment Date", name: "employdate", type: "date", required: true },
-        { label: "Manager ID (Optional)", name: "managerid", type: "text", required: false },
-        // isactive is handled by a checkbox later
+        // *** ADDED: Email and Password for Account creation ***
+        { label: "Email", name: "email", type: "email", required: true },
+        { label: "Initial Password", name: "password", type: "password", required: true },
     ];
 
     const handleChange = (e) => {
@@ -50,8 +58,11 @@ export default function AddPersonnelPage() {
         setMessage('');
         setIsSubmitting(true);
 
-        // Simple validation check
-        if (!formData.name || !formData.dateofbirth || !formData.phonenumber || !formData.position || !formData.department) {
+        // Extended validation check
+        const requiredFields = ['name', 'dateofbirth', 'phonenumber', 'position', 'department', 'email', 'password'];
+        const isValid = requiredFields.every(field => formData[field]);
+
+        if (!isValid) {
             setMessage("Please fill in all required fields.");
             setIsSubmitting(false);
             return;
@@ -64,19 +75,24 @@ export default function AddPersonnelPage() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                // *** UPDATED: Match the db/route.js structure ***
                 body: JSON.stringify({
-                    operation: 'addPersonnel',
-                    params: formData,
+                    operation: 'createPersonnel', // Use 'createPersonnel' as defined in db/route.js
+                    params: {
+                        id: managerId, // Pass the ManagerID as 'id'
+                        data: formData, // Pass all personnel data as 'data'
+                    },
                 }),
             });
             
             const data = await response.json();
 
-            if (response.ok && data.success) {
+            if (response.ok && !data.error) {
                 setMessage(`Success! New personnel '${formData.name}' added.`);
                 
+                // Redirect on success
                 setTimeout(() => {
-                    window.location.href = '/personnel'; 
+                    router.replace('/personnel'); 
                 }, 1500);
 
             } else {
@@ -98,11 +114,11 @@ export default function AddPersonnelPage() {
                 <span className="text-white text-lg font-semibold">Commandr</span>
                 <Button
                     text="Return To Personnels"
-                            style="Filled" // Assuming your Button component handles styling based on this prop
-                            className="text-white bg-transparent border border-white hover:bg-white hover:text-black p-1 text-sm" // Add Tailwind classes for better visual integration with the black bar
-                            onClick={async () => {
-                                router.replace('/personnel');
-                            }}
+                    style="Filled"
+                    className="text-white bg-transparent border border-white hover:bg-white hover:text-black p-1 text-sm"
+                    onClick={async () => {
+                        router.replace('/personnel');
+                    }}
                 />
             </div>
             
@@ -125,7 +141,7 @@ export default function AddPersonnelPage() {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Dynamically render text and date inputs */}
+                            {/* Dynamically render inputs */}
                             {fields.map(field => (
                                 <div key={field.name}>
                                     <label htmlFor={field.name} className="block text-sm font-medium text-gray-700 mb-1">
@@ -159,21 +175,6 @@ export default function AddPersonnelPage() {
                                     )}
                                 </div>
                             ))}
-
-                            {/* Is Active Checkbox */}
-                            <div className="flex items-center pt-8">
-                                <input
-                                    id="isactive"
-                                    name="isactive"
-                                    type="checkbox"
-                                    checked={formData.isactive}
-                                    onChange={handleChange}
-                                    className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                                />
-                                <label htmlFor="isactive" className="ml-3 text-sm font-medium text-gray-700">
-                                    Is Currently Active Employee
-                                </label>
-                            </div>
                         </div>
 
                         {/* Submit Button */}

@@ -35,7 +35,7 @@ export async function getAllPersonnel() {
             FROM
                 personnel AS P 
             LEFT JOIN
-                personnel AS M ON P.UserID = M.UserID
+                personnel AS M ON P.ManagerID = M.UserID
         `;
         const [rows] = await db.execute(query);
         return { success: true, data: rows };
@@ -80,50 +80,49 @@ export async function getPersonnelById(id) {
 }
 
 // Add Personnel
-export async function addPersonnel(data) {}
+export async function addPersonnel(id, data) {
+    try
+    {
+        const managerId = id; 
+    
+        const query = `
+        INSERT into personnel
+        (Name, DateOfbirth, Gender, PhoneNumber, Position, Department, EmployDate, IsActive, ManagerID)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `; 
+        // 9 placeholders for 9 columns
 
+        const [result] = await db.execute(query, [
+            data.name,
+            data.dateofbirth,
+            data.gender,
+            data.phonenumber,
+            data.position,
+            data.department,
+            data.employdate,
+            1, // Use the boolean isactive from formData, convert to 1/0
+            managerId // Use the ID passed to the function
+        ]);
+        
+        const newPersonnelId = result.insertId; 
 
+        const query2 = `
+        Insert into Account (UserID, AccessID, Email, Password, HRID)
+        VALUES (?, ?, ?, ?, ?)
+        `;
+        
+        await db.execute(query2, [
+            newPersonnelId, // UserID = New Personnel ID
+            '1', // AccessID - Assuming '1' is the correct default access level
+            data.email,
+            data.password,
+            managerId, // HRID = Manager ID
+        ]);
 
-
-
-export async function updatePersonnel(id, data) {
-    try {
-        const { email, name, role } = data;
-        const [result] = await db.execute(
-            "UPDATE Account SET email = ?, name = ?, role = ? WHERE id = ?",
-            [email, name, role, id]
-        );
         return { success: true, data: result };
     } catch (error) {
-        console.error("Update personnel error:", error);
-        return { success: false, error: "Failed to update personnel" };
+        console.error("Add personnel error:", error);
+        return { success: false, error: "Failed to add personnel" };
     }
 }
 
-// Add more database operations as needed
-export async function createPersonnel(data) {
-    try {
-        const { email, password, name, role } = data;
-        const [result] = await db.execute(
-            "INSERT INTO Account (email, password, name, role) VALUES (?, ?, ?, ?)",
-            [email, password, name, role]
-        );
-        return { success: true, data: result };
-    } catch (error) {
-        console.error("Create personnel error:", error);
-        return { success: false, error: "Failed to create personnel" };
-    }
-}
-
-export async function deletePersonnel(id) {
-    try {
-        const [result] = await db.execute(
-            "DELETE FROM Account WHERE id = ?",
-            [id]
-        );
-        return { success: true, data: result };
-    } catch (error) {
-        console.error("Delete personnel error:", error);
-        return { success: false, error: "Failed to delete personnel" };
-    }
-}
