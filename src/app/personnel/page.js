@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../components/button/button";
-import Link from "next/link"; // ✨ IMPORT Link
 
+import ViewPersonnelPage from "./viewpersonnel/page";
 
 export default function PersonnelPage() {
     const router = useRouter();
@@ -56,8 +56,7 @@ export default function PersonnelPage() {
 
     // ✨ NEW: Handler function for row clicks
     const handleRowClick = (user) => {
-      // Logic for row click, e.g., navigate to user details page
-      // router.push(`/personnel/${user.userid}`);
+      router.push(`/personnel/viewpersonnel?id=${user.userid}`);
     };
 
     if (isLoading) {
@@ -66,7 +65,6 @@ export default function PersonnelPage() {
 
     return (
         <div className="p-4">
-            {/* 🚀 ADJUSTED: Decorative top bar with Commandr text and Sign Out button */}
             <div aria-hidden="true" className="w-full h-10 bg-black -mx-4 md:-mx-0 flex justify-between items-center px-4">
                 {/* Commandr text on the left */}
                 <span className="text-white text-lg font-semibold">Commandr</span>
@@ -82,6 +80,15 @@ export default function PersonnelPage() {
                     }}
                 />
             </div>
+            <Button
+                    text="Add Personnel"
+                    style="Filled" //
+                    className="text-white bg-transparent border border-white hover:bg-white hover:text-black p-1 text-sm" // Add Tailwind classes for better visual integration with the black bar
+                    onClick={async () => {
+                        await fetch('/api/auth/signout', { method: 'POST', credentials: 'include' });
+                        router.replace('/personnel/addpersonnel');
+                    }}
+                />
             {/* --- */}
 
             <h1 className="text-2xl font-bold my-4">Personnel Page</h1>
@@ -121,6 +128,7 @@ export default function PersonnelPage() {
                     </tbody>
                   </table>
               </div>
+              
         </div>
     )
 }

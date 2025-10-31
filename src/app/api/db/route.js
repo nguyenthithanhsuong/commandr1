@@ -13,6 +13,9 @@ export async function POST(request) {
             case 'getAllPersonnel':
                 result = await dbOps.getAllPersonnel();
                 break;
+            case 'getPersonnelById':
+                result = await dbOps.getPersonnelById(params.id);
+                break;
             case 'updatePersonnel':
                 result = await dbOps.updatePersonnel(params.id, params.data);
                 break;

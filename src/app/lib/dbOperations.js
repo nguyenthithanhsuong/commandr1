@@ -15,7 +15,7 @@ export async function authenticateUser(email, password) {
     }
 }
 
-// Personnel Operations
+// Load All Personnel
 export async function getAllPersonnel() {
     try {
         const query = `
@@ -44,6 +44,47 @@ export async function getAllPersonnel() {
         return { success: false, error: "Failed to fetch personnel" };
     }
 }
+// Load One Personnel
+export async function getPersonnelById(id) {
+    try {
+        const query = `
+            SELECT
+                P.UserID AS userid,
+                P.Name AS name,
+                P.Position AS position,
+                P.Dateofbirth AS dateofbirth,
+                P.Gender AS gender,
+                P.EmployDate AS employdate,
+                P.PhoneNumber AS phonenumber,
+                P.ManagerID AS managerid,
+                P.Department AS department,
+                P.IsActive AS isactive,
+                P.TerminationDate AS terminationdate,
+                M.Name AS managername
+            FROM
+                personnel AS P
+            LEFT JOIN
+                personnel AS M ON P.UserID = M.UserID
+            WHERE
+                P.UserID = ?
+        `;
+        const [rows] = await db.execute(query, [id]);
+        if (rows.length === 0) {
+            return { success: false, error: "Personnel not found" };
+        }
+        return { success: true, data: rows[0] };
+    } catch (error) {
+        console.error("Get personnel by ID error:", error);
+        return { success: false, error: "Failed to fetch personnel" };
+    }
+}
+
+// Add Personnel
+export async function addPersonnel(data) {}
+
+
+
+
 
 export async function updatePersonnel(id, data) {
     try {
