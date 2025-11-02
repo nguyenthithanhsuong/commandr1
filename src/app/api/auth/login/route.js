@@ -4,9 +4,12 @@ import { db } from '@/app/lib/db.js';
 export async function POST(request) {
     try {
         const { email, password } = await request.json();
-
+        const query=
+        `Select * From Account
+        JOIN personnel on Account.UserID = personnel.UserID
+        WHERE email = ? AND Password = ? AND IsActive = 1`
         const [rows] = await db.execute(
-            "SELECT * FROM Account WHERE email = ? AND password = ?",
+            query,
             [email, password]
         );
 

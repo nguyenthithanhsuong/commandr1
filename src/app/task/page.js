@@ -155,7 +155,6 @@ export default function TaskPage() {
                     style="Filled" 
                     className="text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 p-2 text-sm rounded-md shadow-md transition duration-150" 
                     onClick={() => {
-                        // Assuming task creation page is at /task/addtask
                         router.push('/task/addtask'); 
                     }}
                 />

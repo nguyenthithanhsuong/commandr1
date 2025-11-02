@@ -38,6 +38,18 @@ export async function POST(request) {
             case 'getAllTask':
                 result = await dbOps.getAllTask();
                 break;
+            case 'getTaskById':
+                result = await dbOps.getTaskById(params.id);
+                break;
+            case 'createTask':
+                result = await dbOps.addTask(params.id, params.data);
+                break;
+            case 'updateTask':
+                result = await dbOps.updateTask(params.id, params.data);
+                break;
+            case 'deleteTask':
+                result = await dbOps.deleteTask(params.id);
+                break;
             //project
             case 'getAllProject':
                 result = await dbOps.getAllProject();

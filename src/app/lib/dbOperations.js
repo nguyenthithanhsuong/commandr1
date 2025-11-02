@@ -4,8 +4,12 @@ import { db } from "./db.js";
 // Authentication Operations
 export async function authenticateUser(email, password) {
     try {
+        const query=
+        `Select * From Account
+        JOIN personnel on Account.UserID = personnel.UserID
+        WHERE email = ? AND Password = ? AND IsActive = 1`
         const [rows] = await db.execute(
-            "SELECT * FROM Account WHERE email = ? AND password = ?",
+            query,
             [email, password]
         );
         return { success: true, data: rows };
@@ -307,6 +311,110 @@ export async function getAllTask() {
     }
 }
 
+//View Task by ID
+export async function getTaskById(id) {
+    try {
+        const query = `
+            SELECT
+                T.TaskID AS taskid,
+                T.TaskName AS taskname,
+                T.TaskStatus AS taskstatus,
+                A.Name AS assignername,
+                P.Name AS personnelname,
+                T.CreationDate AS creationdate,
+                Pro.ProjectName AS projectname,
+                T.Description AS description
+            FROM
+                Task as T
+            LEFT JOIN
+                personnel AS A ON T.AssignerID = A.UserID
+            LEFT JOIN
+                personnel AS P ON T.PersonnelID = P.UserID
+            LEFT JOIN
+                project as Pro on T.ProjectID = Pro.ProjectID
+            WHERE
+                T.TaskID = ?
+        `;
+        const [rows] = await db.execute(query, [id]);
+        if (rows.length === 0) {
+            return { success: false, error: "Task not found" };
+        }
+        return { success: true, data: rows[0] };
+    } catch (error) {
+        console.error("Get task by ID error:", error);
+        return { success: false, error: "Failed to fetch task" };
+    }
+}  
+// Add Task
+export async function addTask(data) {
+    try {
+        const query = `
+        INSERT into Task
+        (TaskName, TaskStatus, AssignerID, PersonnelID, ProjectID, Description)
+        VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const [result] = await db.execute(query, [
+            data.taskname,
+            data.taskstatus,
+            data.assignerid,
+            data.personnelid,
+            data.projectid,
+            data.description
+        ]);
+        return { success: true, data: result };
+    }
+    catch (error) {
+        console.error("Add task error:", error);
+        return { success: false, error: "Failed to add task" };
+    }
+}
+
+//Update Task
+export async function updateTask(id, data) {
+    try {
+        const taskUpdateQuery = `
+            UPDATE Task SET
+                TaskName = ?,
+                TaskStatus = ?,
+                PersonnelID = ?,
+                ProjectID = ?,
+                Description = ?
+            WHERE TaskID = ?
+            `
+        const [taskResult] = await db.execute(taskUpdateQuery, [
+            data.taskname,
+            data.taskstatus,
+            data.personnelid,
+            data.projectid,
+            data.description,
+            id
+        ]);
+        return { success: true, rowsAffected: taskResult.affectedRows };
+    } catch (error) {
+        console.error("Update task error:", error);
+        return { success: false, error: "Failed to update task" };
+    }
+}
+        
+//Delete Task
+export async function deleteTask(id) {
+    try {   
+        const query = `DELETE FROM Task WHERE TaskID = ?;`;
+        const [taskResult] = await db.execute(
+            query,
+            [id]
+        );
+        if (taskResult.affectedRows === 0) {
+                // Log but still return success if the record wasn't found (idempotent delete)
+                console.warn(`Task with ID ${id} not found for deletion.`);
+        }
+        return { success: true, message: "Task successfully deleted." };
+    } catch (error) {
+        console.error("Delete task error:", error);
+        return { success: false, error: "Failed to delete task" };
+    }
+}
+
 //View Project
 export async function getAllProject() {
     try {
@@ -330,3 +438,5 @@ export async function getAllProject() {
         return { success: false, error: "Failed to fetch tasks" };
     }
 }
+
+ 
