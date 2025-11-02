@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../components/button/button";
 
-import ViewPersonnelPage from "./viewpersonnel/page";
+// NOTE: ViewPersonnelPage import is unused in the component body
+// import ViewPersonnelPage from "./viewpersonnel/page"; 
 
 export default function PersonnelPage() {
     const router = useRouter();
@@ -54,7 +55,7 @@ export default function PersonnelPage() {
         fetchPersonnel();
     }, [router]);
 
-    // ✨ NEW: Handler function for row clicks
+    // Handler function for row clicks
     const handleRowClick = (user) => {
       router.push(`/personnel/viewpersonnel?id=${user.userid}`);
     };
@@ -65,70 +66,78 @@ export default function PersonnelPage() {
 
     return (
         <div className="p-4">
-            <div aria-hidden="true" className="w-full h-10 bg-black -mx-4 md:-mx-0 flex justify-between items-center px-4">
-                {/* Commandr text on the left */}
-                <span className="text-white text-lg font-semibold">Commandr</span>
-                
-                {/* Sign Out Button on the right */}
-                <Button
-                    text="Sign Out"
+            <header className="w-full h-12 bg-black flex justify-between items-center px-4 shadow-md">
+                            <span className="text-white text-xl font-bold tracking-wider">Commandr</span>
+            
+                            <Button
+                                text="Sign Out"
                     style="Filled" // Assuming your Button component handles styling based on this prop
-                    className="text-white bg-transparent border border-white hover:bg-white hover:text-black p-1 text-sm" // Add Tailwind classes for better visual integration with the black bar
+                    className="text-white bg-transparent border border-white hover:bg-white hover:text-black transition duration-200 ease-in-out p-1 px-3 text-sm font-medium" // Add Tailwind classes for better visual integration with the black bar
                     onClick={async () => {
                         await fetch('/api/auth/signout', { method: 'POST', credentials: 'include' });
                         router.replace('/signin');
                     }}
-                />
-            </div>
-            <Button
+                            />
+                        </header>
+            
+            {/* Action buttons section */}
+            <div className="flex justify-between items-center my-4">
+                <h1 className="text-2xl font-bold">Personnel List 👥</h1>
+                <Button
                     text="Add Personnel"
-                    style="Filled" //
-                    className="text-white bg-transparent border border-white hover:bg-white hover:text-black p-1 text-sm" // Add Tailwind classes for better visual integration with the black bar
-                    onClick={async () => {
-                        await fetch('/api/auth/signout', { method: 'POST', credentials: 'include' });
-                        router.replace('/personnel/addpersonnel');
+                    style="Filled" 
+                    // Adjusted Tailwind classes for better standalone look
+                    className="text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 p-2 text-sm rounded-md shadow-md transition duration-150" 
+                    onClick={() => {
+                        // Corrected: Use router.push for navigation to a new page
+                        router.push('/personnel/addpersonnel'); 
                     }}
                 />
+            </div>
             {/* --- */}
 
-            <h1 className="text-2xl font-bold my-4">Personnel Page</h1>
-
-              <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
-                      <tr>
-                          <th className="..." >UserID</th>
-                          <th className="..." >Name</th>
-                          <th className="..." >DateOfBirth</th>
-                          <th className="..." >Gender</th>
-                          <th className="..." >PhoneNumber</th>
-                          <th className="..." >Position</th>
-                          <th className="..." >Department</th>
-                          <th className="..." >EmployDate</th>
-                          <th className="..." >Manager</th>
-                      </tr>
+            {/* Table Container */}
+            <div className="overflow-x-auto shadow-lg rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-300">
+                    <thead>
+                    <tr className="bg-gray-100">
+                        {/* Improved Table Header Styling */}
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UserID</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DateOfBirth</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PhoneNumber</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EmployDate</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manager</th>
+                    </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {users.map((user) => (
                             <tr 
                                 key={user.userid} 
                                 onClick={() => handleRowClick(user)}
-                                className="cursor-pointer hover:bg-gray-50 transition duration-150 ease-in-out">
-                                <td className="...">{user.userid}</td>
-                                <td className="...">{user.name}</td>
-                                <td className="...">{user.dateofbirth.substring(0, 10)}</td>
-                                <td className="...">{user.gender}</td>
-                                <td className="...">{user.phonenumber}</td>
-                                <td className="...">{user.position}</td>
-                                <td className="...">{user.department}</td>
-                                <td className="...">{user.employdate.substring(0, 10)}</td>
-                                <td className="...">{user.managername}</td>
+                                className="cursor-pointer hover:bg-blue-50 transition duration-150 ease-in-out">
+                                {/* Improved Table Data Cell Styling */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.userid}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.dateofbirth.substring(0, 10)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.gender}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.phonenumber}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.position}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.department}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.employdate.substring(0, 10)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.managername}</td>
                             </tr>
                         ))}
                     </tbody>
-                  </table>
-              </div>
-              
+                </table>
+            </div>
+            {/* If no users are available, display a message */}
+            {users.length === 0 && (
+                <p className="text-center text-gray-500 mt-8">No personnel records found.</p>
+            )}
         </div>
     )
 }

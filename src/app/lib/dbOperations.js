@@ -15,6 +15,27 @@ export async function authenticateUser(email, password) {
     }
 }
 
+// Get Position
+export async function getPositions() {
+    try {
+        const query = `
+            SELECT 
+                PositionID AS positionid,
+                PositionName AS positionname,
+                DepartmentID AS departmentid
+            FROM 
+                position
+            ORDER BY 
+                PositionID
+        `;
+        const [rows] = await db.execute(query);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get positions error:", error);
+        return { success: false, error: "Failed to fetch positions" };
+    }
+}
+
 // Load All Personnel
 export async function getAllPersonnel() {
     try {
@@ -22,13 +43,14 @@ export async function getAllPersonnel() {
             SELECT
                 P.UserID AS userid,
                 P.Name AS name,
-                P.Position AS position,
+                Pos.PositionName AS position,
+                Pos.PositionID AS positionid,
                 P.Dateofbirth AS dateofbirth,
                 P.Gender AS gender,
                 P.EmployDate AS employdate,
                 P.PhoneNumber AS phonenumber,
                 P.ManagerID AS managerid,
-                P.Department AS department,
+                D.DepartmentName AS department,
                 P.IsActive AS isactive,
                 P.TerminationDate AS terminationdate,
                 M.Name AS managername
@@ -36,6 +58,10 @@ export async function getAllPersonnel() {
                 personnel AS P 
             LEFT JOIN
                 personnel AS M ON P.ManagerID = M.UserID
+            JOIN
+                position AS Pos ON P.PositionID = Pos.PositionID
+            JOIN
+                department AS D ON Pos.DepartmentID = D.DepartmentID
         `;
         const [rows] = await db.execute(query);
         return { success: true, data: rows };
@@ -44,6 +70,7 @@ export async function getAllPersonnel() {
         return { success: false, error: "Failed to fetch personnel" };
     }
 }
+
 // Load One Personnel
 export async function getPersonnelById(id) {
     try {
@@ -51,20 +78,27 @@ export async function getPersonnelById(id) {
             SELECT
                 P.UserID AS userid,
                 P.Name AS name,
-                P.Position AS position,
+                Pos.PositionName AS position,
                 P.Dateofbirth AS dateofbirth,
                 P.Gender AS gender,
                 P.EmployDate AS employdate,
                 P.PhoneNumber AS phonenumber,
                 P.ManagerID AS managerid,
-                P.Department AS department,
+                D.DepartmentName AS department,
                 P.IsActive AS isactive,
                 P.TerminationDate AS terminationdate,
-                M.Name AS managername
+                M.Name AS managername,
+                account.Email AS email
             FROM
-                personnel AS P
+                personnel AS P 
             LEFT JOIN
-                personnel AS M ON P.UserID = M.UserID
+                personnel AS M ON P.ManagerID = M.UserID
+            JOIN
+                position AS Pos ON P.PositionID = Pos.PositionID
+            JOIN
+                department AS D ON Pos.DepartmentID = D.DepartmentID
+            JOIN
+                account ON P.UserID = account.UserID
             WHERE
                 P.UserID = ?
         `;
@@ -87,8 +121,8 @@ export async function addPersonnel(id, data) {
     
         const query = `
         INSERT into personnel
-        (Name, DateOfbirth, Gender, PhoneNumber, Position, Department, EmployDate, IsActive, ManagerID)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (Name, DateOfbirth, Gender, PhoneNumber, PositionID, EmployDate, IsActive, ManagerID)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `; 
         // 9 placeholders for 9 columns
 
@@ -97,8 +131,7 @@ export async function addPersonnel(id, data) {
             data.dateofbirth,
             data.gender,
             data.phonenumber,
-            data.position,
-            data.department,
+            data.positionid,
             data.employdate,
             1, // Use the boolean isactive from formData, convert to 1/0
             managerId // Use the ID passed to the function
@@ -126,3 +159,120 @@ export async function addPersonnel(id, data) {
     }
 }
 
+//Update Personnel
+export async function updatePersonnel(id, data) {
+    try {
+        // Start by updating the personnel table
+        const personnelUpdateQuery = `
+            UPDATE personnel SET 
+                Name = ?, 
+                Dateofbirth = ?, 
+                Gender = ?, 
+                PhoneNumber = ?, 
+                PositionID = ?, 
+                EmployDate = ?,
+                IsActive = ?,
+                TerminationDate = ?
+            WHERE UserID = ?
+        `;
+
+        const [personnelResult] = await db.execute(personnelUpdateQuery, [
+            data.name,
+            data.dateofbirth,
+            data.gender,
+            data.phonenumber,
+            data.positionid,
+            data.employdate,
+            data.isactive ? 1 : 0, // Convert boolean/value to 1 or 0
+            data.terminationdate || null, // Allow null if no termination date
+            id
+        ]);
+        
+        if (data.email || data.password) {
+            let accountUpdateParts = [];
+            let accountUpdateValues = [];
+
+            if (data.email) {
+                accountUpdateParts.push("Email = ?");
+                accountUpdateValues.push(data.email);
+            }
+            if (data.password) {
+                accountUpdateParts.push("Password = ?");
+                accountUpdateValues.push(data.password);
+            }
+
+            if (accountUpdateParts.length > 0) {
+                const accountUpdateQuery = `
+                    UPDATE Account SET 
+                        ${accountUpdateParts.join(', ')}
+                    WHERE UserID = ?
+                `;
+                accountUpdateValues.push(id);
+                await db.execute(accountUpdateQuery, accountUpdateValues);
+            }
+        }
+
+        return { success: true, rowsAffected: personnelResult.affectedRows };
+    } catch (error) {
+        console.error("Update personnel error:", error);
+        return { success: false, error: "Failed to update personnel" };
+    }
+}
+
+//Delete Personnel
+export async function deletePersonnel(id) {
+    try {
+        const query = `DELETE FROM Account WHERE UserID = ?;`;
+        const [accountResult] = await db.execute(
+            query,
+            [id]
+        );
+        if (accountResult.affectedRows === 0) {
+             // Log but still return success if the record wasn't found (idempotent delete)
+             console.warn(`Account with ID ${id} not found for deletion.`);
+        }
+        const query2 = `DELETE FROM Personnel WHERE UserID = ?;`;
+        const [personnelResult] = await db.execute(
+            query2,
+            [id]
+        );
+
+        if (personnelResult.affectedRows === 0) {
+             // Log but still return success if the record wasn't found (idempotent delete)
+             console.warn(`Personnel with ID ${id} not found for deletion.`);
+        }
+
+        return { success: true, message: "Personnel and related account successfully deleted." };
+    } catch (error) {
+        console.error("Delete personnel error:", error);
+        return { success: false, error: "Failed to delete personnel" };
+    }
+}
+
+//Retire Personnel
+export async function retirePersonnel(id)
+{
+    try
+    {
+        const personnelUpdateQuery = `
+            UPDATE personnel SET 
+                IsActive = ?,
+                TerminationDate = ?
+            WHERE UserID = ?
+        `;
+        
+        const today = new Date().toISOString().slice(0, 10);
+
+        const [personnelResult] = await db.execute(personnelUpdateQuery, [
+            0, // Convert boolean/value to 1 or 0
+            today, // Set termination date to today
+            id
+        ]);
+
+        return { success: true, rowsAffected: personnelResult.affectedRows };
+
+    } catch (error) {
+        console.error("Update personnel error:", error);
+        return { success: false, error: "Failed to update personnel" };
+    }
+}

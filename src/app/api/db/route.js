@@ -7,9 +7,11 @@ export async function POST(request) {
 
         let result;
         switch (operation) {
+            //authentication
             case 'authenticate':
                 result = await dbOps.authenticateUser(params.email, params.password);
                 break;
+            //personnel
             case 'getAllPersonnel':
                 result = await dbOps.getAllPersonnel();
                 break;
@@ -18,6 +20,19 @@ export async function POST(request) {
                 break;
             case 'createPersonnel':
                 result = await dbOps.addPersonnel(params.id, params.data);
+                break;
+            case 'updatePersonnel':
+                result = await dbOps.updatePersonnel(params.id, params.data);
+                break;
+            case 'deletePersonnel':
+                result = await dbOps.deletePersonnel(params.id);
+                break;
+            case 'retirePersonnel':
+                    result = await dbOps.retirePersonnel(params.id);
+                    break;
+            //position
+            case 'getPositions':
+                result = await dbOps.getPositions();
                 break;
             default:
                 return NextResponse.json(
@@ -57,7 +72,7 @@ export async function POST(request) {
             }
         }
 
-        return NextResponse.json({ data: result.data });
+        return NextResponse.json({ success: true, data: result.data });
 
     } catch (error) {
         console.error('API error:', error);

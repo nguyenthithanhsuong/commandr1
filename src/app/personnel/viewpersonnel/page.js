@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Button from "../../components/button/button";
+import Button from "../../components/button/button"; // Assuming the Button component is correctly imported
 
 export default function ViewPersonnelPage() {
     const router = useRouter();
@@ -49,6 +49,83 @@ export default function ViewPersonnelPage() {
         fetchPersonnelById();
     }, [userid, router]);
 
+    // --- Action Handlers ---
+
+    const handleUpdate = () => {
+        // Navigate to the edit page, passing the user ID
+        router.push(`/personnel/updatepersonnel?id=${userid}`);
+    };
+
+    const handleRetire = async () => {
+        if (!window.confirm(`Are you sure you want to retire personnel: ${user.name}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            // Replace with your actual retire API call logic
+            console.log(`Attempting to retire user with ID: ${userid}`);
+
+            // Example API call structure (you'll need to implement the API route)
+            const response = await fetch('/api/db', { 
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    operation: 'retirePersonnel',
+                    params: { id: userid }
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                alert('Personnel retired successfully!');
+            } else {
+                alert(`Failed to retire personnel: ${data.error || 'Unknown error'}`);
+            }
+            router.replace('/personnel'); // Redirect back to the list
+        } catch (error) {
+            console.error('Error deleting personnel:', error);
+            alert('An error occurred while deleting personnel.');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm(`Are you sure you want to delete personnel: ${user.name}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            // Replace with your actual delete API call logic
+            console.log(`Attempting to delete user with ID: ${userid}`);
+            
+            // Example API call structure (you'll need to implement the API route)
+            const response = await fetch('/api/db', { 
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    operation: 'deletePersonnel',
+                    params: { id: userid }
+                }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                alert('Personnel deleted successfully!');
+            } else {
+                alert(`Failed to delete personnel: ${data.error || 'Unknown error'}`);
+            }
+            router.replace('/personnel'); // Redirect back to the list
+        } catch (error) {
+            console.error('Error deleting personnel:', error);
+            alert('An error occurred while deleting personnel.');
+        }
+    };
+
+    // --- Loading and Error States ---
+
     if (isLoading) {
         return <div className="p-8 text-center text-lg text-gray-700">Loading user details...</div>;
     }
@@ -56,6 +133,8 @@ export default function ViewPersonnelPage() {
     if (!user) {
         return <div className="p-8 text-center text-xl font-semibold text-red-600">User details not found.</div>;
     }
+
+    // --- Helper Functions and Components ---
 
     // Helper function to format date strings
     const formatDate = (dateString) => {
@@ -74,6 +153,8 @@ export default function ViewPersonnelPage() {
         </div>
     );
 
+    // --- Rendered Component ---
+
     return(
         <div className="min-h-screen bg-gray-50">
             {/* Header/Navigation Bar (Black) */}
@@ -82,7 +163,7 @@ export default function ViewPersonnelPage() {
 
                 <Button
                     text="Return To Personnel List"
-                    style="Outline" // Assuming this gives a transparent look, or you can use your own custom styling
+                    style="Filled"
                     className="text-white bg-transparent border border-white hover:bg-white hover:text-black transition duration-200 ease-in-out p-1 px-3 text-sm font-medium"
                     onClick={() => {
                         router.replace('/personnel');
@@ -91,12 +172,39 @@ export default function ViewPersonnelPage() {
             </header>
             
             <main className="p-4 md:p-8 max-w-4xl mx-auto">
-                {/* Personnel Header */}
-                <div className="pb-6 border-b border-gray-300 mb-6">
-                    <h1 className="text-3xl font-extrabold text-gray-900">
-                        Personnel Details
-                    </h1>
-                    <p className="text-xl text-gray-600 mt-1">Viewing: <span className="font-semibold">{user.name}</span></p>
+                {/* Personnel Header and Action Buttons */}
+                <div className="pb-6 border-b border-gray-300 mb-6 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-gray-900">
+                            Personnel Details
+                        </h1>
+                        <p className="text-xl text-gray-600 mt-1">Viewing: <span className="font-semibold">{user.name}</span></p>
+                    </div>
+                    
+                    <div className="flex space-x-3">
+                        {/* Update Button */}
+                        <Button
+                            text="Update Personnel"
+                            style="Filled" 
+                            className="bg-blue-600 text-white hover:bg-blue-700 transition duration-200 ease-in-out px-4 py-2 font-medium rounded-lg shadow-md"
+                            onClick={handleUpdate}
+                        />
+                        {/* Retire Button */}
+                        <Button
+                            text="Retire Personnel"
+                            style="Filled" 
+                            className="bg-blue-600 text-white hover:bg-blue-700 transition duration-200 ease-in-out px-4 py-2 font-medium rounded-lg shadow-md"
+                            onClick={handleRetire}
+                        />
+                        
+                        {/* Delete Button */}
+                        <Button
+                            text="Delete Personnel"
+                            style="Filled"
+                            className="bg-red-600 text-white hover:bg-red-700 transition duration-200 ease-in-out px-4 py-2 font-medium rounded-lg shadow-md"
+                            onClick={handleDelete}
+                        />
+                    </div>
                 </div>
 
                 {/* Details Card (White Background) */}
