@@ -34,6 +34,14 @@ export async function POST(request) {
             case 'getPositions':
                 result = await dbOps.getPositions();
                 break;
+            //task
+            case 'getAllTask':
+                result = await dbOps.getAllTask();
+                break;
+            //project
+            case 'getAllProject':
+                result = await dbOps.getAllProject();
+                break;
             default:
                 return NextResponse.json(
                     { error: 'Unknown operation' },

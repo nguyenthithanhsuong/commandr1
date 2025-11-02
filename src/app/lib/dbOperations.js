@@ -276,3 +276,57 @@ export async function retirePersonnel(id)
         return { success: false, error: "Failed to update personnel" };
     }
 }
+
+//View Task
+export async function getAllTask() {
+    try {
+        const query = `
+            SELECT
+                T.TaskID AS taskid,
+                T.TaskName AS taskname,
+                T.TaskStatus AS taskstatus,
+                A.Name AS assignername,
+                P.Name AS personnelname,
+                T.CreationDate AS creationdate,
+                Pro.ProjectName AS projectname,
+                T.Description AS description
+            FROM
+                Task as T 
+            LEFT JOIN
+                personnel AS A ON T.AssignerID = A.UserID
+            LEFT JOIN
+                personnel AS P ON T.PersonnelID = P.UserID
+            LEFT JOIN
+                project as Pro on T.ProjectID = Pro.ProjectID
+        `;
+        const [rows] = await db.execute(query);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get task error:", error);
+        return { success: false, error: "Failed to fetch tasks" };
+    }
+}
+
+//View Project
+export async function getAllProject() {
+    try {
+        const query = `
+            SELECT
+                P.ProjectID AS projectid,
+                P.ProjectName AS projectname,
+                P.ProjectStatus AS projectstatus,
+                P.CreationDate AS creationdate,
+                P.Description AS description,
+                A.Name AS assignername
+            FROM
+                Project as P
+            LEFT JOIN
+                personnel AS A ON P.AssignerID = A.UserID
+        `;
+        const [rows] = await db.execute(query);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get task error:", error);
+        return { success: false, error: "Failed to fetch tasks" };
+    }
+}
