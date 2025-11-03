@@ -22,21 +22,20 @@ export async function GET(request) {
     const tokenValue = cookies['auth_token'];
 
     console.log('/api/auth/check cookie value:', tokenValue);
-
     if (!tokenValue) {
         return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
     try {
         const userData = JSON.parse(Buffer.from(tokenValue, 'base64').toString());
-
         if (userData.exp < Date.now()) {
             return NextResponse.json({ error: 'Session expired' }, { status: 401 });
         }
-
-        return NextResponse.json({ authenticated: true });
+        console.error('testing 1: ' + userData.id);
+        return NextResponse.json({ authenticated: true, user: userData.id });
     } catch (error) {
         console.error('/api/auth/check error parsing token:', error);
         return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 }
+

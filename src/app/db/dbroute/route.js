@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import * as dbOps from '@/app/lib/dbOperations';
+import * as dbOps from '@/app/db/dbOperations';
 
 export async function POST(request) {
     try {
         const { operation, params } = await request.json();
-
+        
         let result;
         switch (operation) {
             //authentication
@@ -14,6 +14,9 @@ export async function POST(request) {
             //personnel
             case 'getAllPersonnel':
                 result = await dbOps.getAllPersonnel();
+                break;
+            case 'getAllPersonnelActive':
+                result = await dbOps.getAllPersonnelActive();
                 break;
             case 'getPersonnelById':
                 result = await dbOps.getPersonnelById(params.id);
@@ -42,7 +45,7 @@ export async function POST(request) {
                 result = await dbOps.getTaskById(params.id);
                 break;
             case 'createTask':
-                result = await dbOps.addTask(params.id, params.data);
+                result = await dbOps.addTask(params.data);
                 break;
             case 'updateTask':
                 result = await dbOps.updateTask(params.id, params.data);
@@ -74,12 +77,11 @@ export async function POST(request) {
             const user = Array.isArray(result.data) && result.data[0];
             if (user) {
                 const token = Buffer.from(JSON.stringify({
-                    id: user.id,
-                    email: user.email,
+                    id: user.UserID,
+                    email: user.Email,
                     exp: Date.now() + 24 * 60 * 60 * 1000,
                 })).toString('base64');
-
-                    const response = NextResponse.json({ data: result.data });
+                    const response = NextResponse.json({ data: result.data});
                 response.cookies.set('auth_token', token, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === 'production',
@@ -87,7 +89,6 @@ export async function POST(request) {
                     maxAge: 24 * 60 * 60,
                     path: '/',
                 });
-
                 return response;
             }
         }

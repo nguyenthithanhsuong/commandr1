@@ -12,13 +12,12 @@ export async function authenticateUser(email, password) {
             query,
             [email, password]
         );
-        return { success: true, data: rows };
+        return { success: true, data: rows};
     } catch (error) {
         console.error("Authentication error:", error);
         return { success: false, error: "Authentication failed" };
     }
 }
-
 // Get Position
 export async function getPositions() {
     try {
@@ -39,7 +38,6 @@ export async function getPositions() {
         return { success: false, error: "Failed to fetch positions" };
     }
 }
-
 // Load All Personnel
 export async function getAllPersonnel() {
     try {
@@ -74,7 +72,42 @@ export async function getAllPersonnel() {
         return { success: false, error: "Failed to fetch personnel" };
     }
 }
-
+//Load All Active Personnel
+export async function getAllPersonnelActive() {
+    try {
+        const query = `
+            SELECT
+                P.UserID AS userid,
+                P.Name AS name,
+                Pos.PositionName AS position,
+                Pos.PositionID AS positionid,
+                P.Dateofbirth AS dateofbirth,
+                P.Gender AS gender,
+                P.EmployDate AS employdate,
+                P.PhoneNumber AS phonenumber,
+                P.ManagerID AS managerid,
+                D.DepartmentName AS department,
+                P.IsActive AS isactive,
+                P.TerminationDate AS terminationdate,
+                M.Name AS managername
+            FROM
+                personnel AS P 
+            LEFT JOIN
+                personnel AS M ON P.ManagerID = M.UserID
+            JOIN
+                position AS Pos ON P.PositionID = Pos.PositionID
+            JOIN
+                department AS D ON Pos.DepartmentID = D.DepartmentID
+            WHERE
+                P.IsActive=1
+        `;
+        const [rows] = await db.execute(query);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get personnel error:", error);
+        return { success: false, error: "Failed to fetch personnel" };
+    }
+}
 // Load One Personnel
 export async function getPersonnelById(id) {
     try {
@@ -116,7 +149,6 @@ export async function getPersonnelById(id) {
         return { success: false, error: "Failed to fetch personnel" };
     }
 }
-
 // Add Personnel
 export async function addPersonnel(id, data) {
     try
@@ -162,7 +194,6 @@ export async function addPersonnel(id, data) {
         return { success: false, error: "Failed to add personnel" };
     }
 }
-
 //Update Personnel
 export async function updatePersonnel(id, data) {
     try {
@@ -222,7 +253,6 @@ export async function updatePersonnel(id, data) {
         return { success: false, error: "Failed to update personnel" };
     }
 }
-
 //Delete Personnel
 export async function deletePersonnel(id) {
     try {
@@ -252,7 +282,6 @@ export async function deletePersonnel(id) {
         return { success: false, error: "Failed to delete personnel" };
     }
 }
-
 //Retire Personnel
 export async function retirePersonnel(id)
 {
@@ -280,7 +309,6 @@ export async function retirePersonnel(id)
         return { success: false, error: "Failed to update personnel" };
     }
 }
-
 //View Task
 export async function getAllTask() {
     try {
@@ -310,7 +338,6 @@ export async function getAllTask() {
         return { success: false, error: "Failed to fetch tasks" };
     }
 }
-
 //View Task by ID
 export async function getTaskById(id) {
     try {
@@ -368,9 +395,8 @@ export async function addTask(data) {
         return { success: false, error: "Failed to add task" };
     }
 }
-
 //Update Task
-export async function updateTask(id, data) {
+export async function updateTask(data) {
     try {
         const taskUpdateQuery = `
             UPDATE Task SET

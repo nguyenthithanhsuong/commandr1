@@ -41,7 +41,7 @@ export default function ViewTaskPage() {
         const fetchTaskById = async () => {
             try {
                 // Call the API route handler that uses the 'getTaskById' server action
-                const response = await fetch('/api/db', {
+                const response = await fetch('/db/dbroute', {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
@@ -87,7 +87,7 @@ export default function ViewTaskPage() {
             console.log(`Attempting to delete task with ID: ${taskid}`);
             
             // Example API call structure using the 'deleteTask' operation
-            const response = await fetch('/api/db', { 
+            const response = await fetch('/db/dbroute', { 
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

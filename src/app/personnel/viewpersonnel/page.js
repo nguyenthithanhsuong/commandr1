@@ -21,7 +21,7 @@ export default function ViewPersonnelPage() {
 
         const fetchPersonnelById = async () => {
             try {
-                const response = await fetch('/api/db', {
+                const response = await fetch('/db/dbroute', {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
@@ -66,7 +66,7 @@ export default function ViewPersonnelPage() {
             console.log(`Attempting to retire user with ID: ${userid}`);
 
             // Example API call structure (you'll need to implement the API route)
-            const response = await fetch('/api/db', { 
+            const response = await fetch('/db/dbroute', { 
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -100,7 +100,7 @@ export default function ViewPersonnelPage() {
             console.log(`Attempting to delete user with ID: ${userid}`);
             
             // Example API call structure (you'll need to implement the API route)
-            const response = await fetch('/api/db', { 
+            const response = await fetch('/db/dbroute', { 
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

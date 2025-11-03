@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../components/button/button";
 
+
 export default function SignInPage() {
     const router = useRouter();
     
@@ -11,6 +12,7 @@ export default function SignInPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState(""); 
     const [error, setError] = useState("");
+    let ID = 0;
     //button click handle
     const handleSubmit = async (e) => {
         console.log("Submitting sign-in form with:", { email, password });
@@ -19,7 +21,7 @@ export default function SignInPage() {
         
         try {
             //fetch to api/db to authenticate
-            const loginResponse = await fetch('/api/db', {
+            const loginResponse = await fetch('/db/dbroute', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -33,21 +35,19 @@ export default function SignInPage() {
                     }
                 }),
             });
-            //get json response
-            const result = await loginResponse.json();
 
+            const result = await loginResponse.json();
             if (!loginResponse.ok) {
                 throw new Error(result.error || 'Sign in failed');
             }
-
             if (result.data.length === 0) {
                 alert("Invalid email or password.");
                 return;
             }
-
-            // Successfully signed in; /api/db authenticate sets the session cookie on success
+            
             alert("Sign-in successful!");
-            // Navigate to the personnel page
+            ID = result.userid;
+            
             router.push('/personnel');
             
         } catch (error) {
@@ -55,7 +55,6 @@ export default function SignInPage() {
             alert("Unexpected error, try again later!");
         }
     }
-
     //ui:
 
     return (

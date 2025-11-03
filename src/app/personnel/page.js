@@ -4,6 +4,8 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../components/button/button";
 
+let AssignerID=0;
+
 export default function PersonnelPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +35,7 @@ export default function PersonnelPage() {
     const fetchPersonnel = useCallback(async (includeInactive) => {
         setIsLoading(true);
         try {
-            const response = await fetch('/api/db', {
+            const response = await fetch('/db/dbroute', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -72,12 +74,13 @@ export default function PersonnelPage() {
                     router.replace('/signin');
                     return;
                 }
+                const data = await response.json();
+                AssignerID=data.user;
             } catch (error) {
                 console.error('Auth check failed:', error);
                 router.replace('/signin');
             }
         };
-
         checkAuth();
         // Initial fetch
         fetchPersonnel(showInactive); 
@@ -92,9 +95,7 @@ export default function PersonnelPage() {
     }, [showInactive, fetchPersonnel]); 
 
 
-    // 🎯 UPDATED FILTERING LOGIC 🎯
-    // Filters personnel based on showInactive status first, then applies the search term.
-    const filteredUsers = useMemo(() => {
+   const filteredUsers = useMemo(() => {
         let currentUsers = users;
 
         // 1. Filter by Active Status if showInactive is FALSE

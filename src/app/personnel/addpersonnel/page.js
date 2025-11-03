@@ -5,16 +5,11 @@ import React, { useState, useEffect } from "react"; // ⬅️ ADDED useEffect
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "../../components/button/button";
 
-// ❌ REMOVE the 'department' field from the form, as it will be derived from 'positionid'
-// The `Add Personnel` operation in dboperation.js will be fixed separately.
 
 export default function AddPersonnelPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     
-    // NOTE: This ID should typically come from a session/auth context 
-    const managerId = '1'; 
-
     // 🆕 NEW STATE: To hold fetched positions and handle loading
     const [positions, setPositions] = useState([]);
     const [isLoading, setIsLoading] = useState(true); // ⬅️ Set default to true now
@@ -34,13 +29,32 @@ export default function AddPersonnelPage() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
+    let AssignerID=0;
+    useEffect(() => {
+            const checkAuth = async () => {
+                try {
+                    const response = await fetch('../api/auth/check', { credentials: 'include' });
+                    if (!response.ok) {
+                        router.replace('/signin');
+                        return;
+                    }
+                    const data = await response.json();
+                    AssignerID=data.user;
+                    console.error('hehe: ' + AssignerID);
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    router.replace('/signin');
+                }
+            };
+            checkAuth();
+        }, [router]);
 
-    // 🆕 NEW HOOK: Fetch positions when the component mounts
+
     useEffect(() => {
         async function fetchPositions() {
             try {
                 // Call the new API endpoint to get positions
-                const response = await fetch('/api/db', {
+                const response = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ operation: 'getPositions' }),
@@ -107,7 +121,7 @@ export default function AddPersonnelPage() {
         }
 
         try {
-            const response = await fetch('/api/db', {
+            const response = await fetch('/db/dbroute', {
                 method: 'POST',
                 credentials: 'include',
                 headers: {
@@ -116,7 +130,7 @@ export default function AddPersonnelPage() {
                 body: JSON.stringify({
                     operation: 'createPersonnel', 
                     params: {
-                        id: managerId, 
+                        id: AssignerID, 
                         data: formData, // Pass all personnel data as 'data'
                     },
                 }),

@@ -37,7 +37,7 @@ export default function UpdatePersonnelPage() {
 
             // 1. Fetch Personnel Data
             try {
-                const personnelResponse = await fetch('/api/db', {
+                const personnelResponse = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ operation: 'getPersonnelById', params: { id: personnelId } }),
@@ -52,7 +52,7 @@ export default function UpdatePersonnelPage() {
 
             // 2. Fetch Positions List
             try {
-                const positionsResponse = await fetch('/api/db', {
+                const positionsResponse = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ operation: 'getPositions' }),
@@ -136,7 +136,7 @@ export default function UpdatePersonnelPage() {
         }
 
         try {
-            const response = await fetch('/api/db', {
+            const response = await fetch('/db/dbroute', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

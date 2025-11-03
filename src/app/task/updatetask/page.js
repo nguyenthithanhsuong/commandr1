@@ -1,87 +1,114 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+// We need to use 'useSearchParams' to get the task ID from the URL
+import { useRouter, useSearchParams } from "next/navigation"; 
 import Button from "../../components/button/button";
 
+// NOTE: In a real application, the current user's ID (the assigner) 
+// would come from an authentication context/session. We'll hardcode it for this example.
 const ASSIGNER_ID = '1'; 
 
-export default function AddTaskPage() {
+export default function UpdateTaskPage() { // Renamed component
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const taskId = searchParams.get('id'); // ⭐ GET THE TASK ID FROM THE URL
 
-    // 🆕 NEW STATES: To hold fetched data and handle loading
+    // --- State Initialization ---
     const [personnelList, setPersonnelList] = useState([]);
     const [projectList, setProjectList] = useState([]);
-    const [isLoading, setIsLoading] = useState(true); // Default to true while fetching initial data
+    
+    // ⭐ New state for the initial task data
+    const [initialTaskData, setInitialTaskData] = useState(null); 
 
+    const [isLoading, setIsLoading] = useState(true); 
     const [formData, setFormData] = useState({
         taskname: '',
-        taskstatus: 'To Do', // Default status
-        assignerid: ASSIGNER_ID, // Hardcoded ID for the creator/assigner
-        personnelid: '', // Who the task is assigned to
-        projectid: null, // Which project the task belongs to
+        taskstatus: 'To Do', 
+        assignerid: ASSIGNER_ID,
+        personnelid: '', 
+        projectid: '', 
         description: '',
     });
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
 
-    // --- Data Fetching Hook: Personnel and Projects ---
+    // --- Data Fetching Hook: Task, Personnel, and Projects ---
     useEffect(() => {
+        if (!taskId) {
+            setMessage("Error: No Task ID provided for update.");
+            setIsLoading(false);
+            return;
+        }
+
         const fetchDependencies = async () => {
             try {
-                // 1. Fetch All Personnel (for assignment)
+                // 0. Fetch Specific Task Data
+                const taskResponse = await fetch('/db/dbroute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // Operation needs to be 'getTaskById'
+                    body: JSON.stringify({ operation: 'getTaskById', params: { id: taskId } }), 
+                });
+                const taskData = await taskResponse.json();
+
+                if (taskResponse.ok && taskData.success) {
+                    setInitialTaskData(taskData.data);
+                    // ⭐ Initialize form data with fetched task values (using their ID fields)
+                    setFormData({
+                        taskname: taskData.data.taskname,
+                        taskstatus: taskData.data.taskstatus,
+                        assignerid: ASSIGNER_ID, 
+                        personnelid: taskData.data.personnelid?.toString() || '',
+                        projectid: taskData.data.projectid?.toString() || '', 
+                        description: taskData.data.description || '',
+                    });
+                } else {
+                    console.error('Error fetching task:', taskData.error);
+                    setMessage(`Could not load task with ID ${taskId}. ${taskData.error}`);
+                    setIsLoading(false);
+                    return; // Stop if the task can't be loaded
+                }
+
+
+                // 1. Fetch All Personnel Active
                 const personnelResponse = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ operation: 'getAllPersonnelActive' }),
                 });
                 const personnelData = await personnelResponse.json();
-
                 if (personnelResponse.ok && personnelData.success) {
                     setPersonnelList(personnelData.data);
-                    // Set a default assigned personnel if available (optional)
-                    if (personnelData.data.length > 0) {
-                        setFormData(prev => ({
-                            ...prev,
-                            personnelid: personnelData.data[0].userid.toString(),
-                        }));
-                    }
                 } else {
                     console.error('Error fetching personnel:', personnelData.error);
                 }
 
-                // 2. Fetch All Projects (for project linkage)
+                // 2. Fetch All Projects
                 const projectResponse = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ operation: 'getAllProject' }),
                 });
                 const projectData = await projectResponse.json();
-
                 if (projectResponse.ok && projectData.success) {
                     setProjectList(projectData.data);
-                    // Set a default project if available (optional)
-                    if (projectData.data.length > 0) {
-                        setFormData(prev => ({
-                            ...prev,
-                            projectid: projectData.data[0].projectid.toString(),
-                        }));
-                    }
                 } else {
                     console.error('Error fetching projects:', projectData.error);
                 }
+                
             } catch (error) {
                 console.error('Fetch dependencies error:', error);
-                setMessage('An unexpected error occurred while fetching personnel and project lists.');
+                setMessage('An unexpected error occurred while fetching task details, personnel, and project lists.');
             } finally {
                 setIsLoading(false);
             }
         };
         fetchDependencies();
-    }, []); 
+    }, [taskId]); // Re-run effect if taskId changes
 
-    // --- Form Fields Definition ---
+    // --- Form Fields Definition (Remains the same as AddTaskPage) ---
     const fields = [
         { label: "Task Name", name: "taskname", type: "text", required: true },
         { label: "Task Status", name: "taskstatus", type: "select", options: ["To Do", "In Progress", "Completed"], required: true },
@@ -96,7 +123,6 @@ export default function AddTaskPage() {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            // Convert to string to ensure consistency, though IDs are usually numbers
             [name]: value.toString(), 
         }));
     };
@@ -124,9 +150,11 @@ export default function AddTaskPage() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    operation: 'createTask', // The operation defined in your server actions
+                    // ⭐ The operation changes to 'updateTask'
+                    operation: 'updateTask', 
                     params: {
-                        data: formData, // Pass all task data
+                        id: taskId, // ⭐ Pass the Task ID
+                        data: formData, // Pass all updated task data
                     },
                 }),
             });
@@ -134,14 +162,14 @@ export default function AddTaskPage() {
             const data = await response.json();
 
             if (response.ok && data.success) {
-                setMessage(`Success! New task '${formData.taskname}' added.`);
+                setMessage(`Success! Task '${formData.taskname}' updated.`);
                 
                 setTimeout(() => {
                     router.replace('/task'); 
                 }, 1500);
 
             } else {
-                setMessage(`Error: Failed to add task. ${data.error || 'Unknown error.'}`);
+                setMessage(`Error: Failed to update task. ${data.error || 'Unknown error.'}`);
             }
 
         } catch (error) {
@@ -157,17 +185,26 @@ export default function AddTaskPage() {
     if (isLoading) { 
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <p className="text-xl font-semibold text-gray-600">Loading personnel and project lists... 🔄</p>
+                <p className="text-xl font-semibold text-gray-600">Loading task details... 🔄</p>
+            </div>
+        );
+    }
+
+    if (!initialTaskData) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <p className="text-xl font-semibold text-red-600">
+                    Task Not Found or an Error Occurred.
+                </p>
             </div>
         );
     }
     
-    // Check if essential lists are empty
     if (personnelList.length === 0) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <p className="text-xl font-semibold text-red-600">
-                    Cannot add a task: No personnel records found to assign to.
+                    Cannot edit task: No personnel records found to assign to.
                 </p>
             </div>
         );
@@ -192,7 +229,7 @@ export default function AddTaskPage() {
             <div className="flex-grow p-4 md:p-8">
                 <div className="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl">
                     <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">
-                        Create New Task ✍️
+                        Edit Task: **{initialTaskData.taskname}** 📝
                     </h1>
                     
                     {/* Status Message */}
@@ -294,9 +331,9 @@ export default function AddTaskPage() {
                             <Button
                                 type="submit"
                                 style="Filled"
-                                text={isSubmitting ? "Creating Task..." : "Create Task"}
+                                text={isSubmitting ? "Updating Task..." : "Update Task"}
                                 disabled={isSubmitting}
-                                className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                                className="w-full bg-green-600 text-white hover:bg-green-700"
                             />
                         </div>
                     </form>

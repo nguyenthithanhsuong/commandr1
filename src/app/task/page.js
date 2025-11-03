@@ -45,7 +45,7 @@ export default function TaskPage() {
         // Modified fetch function to call getAllTask
         const fetchTasks = async () => {
             try {
-                const response = await fetch('/api/db', {
+                const response = await fetch('/db/dbroute', {
                     method: 'POST',
                     credentials: 'include',
                     headers: {

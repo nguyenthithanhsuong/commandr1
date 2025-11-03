@@ -45,7 +45,7 @@ export default function ProjectPage() {
         // Modified fetch function to call getAllProject
         const fetchProjects = async () => {
             try {
-                const response = await fetch('/api/db', {
+                const response = await fetch('/db/dbroute', {
                     method: 'POST',
                     credentials: 'include',
                     headers: {
