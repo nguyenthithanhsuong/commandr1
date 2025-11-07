@@ -9,7 +9,6 @@ export default function UpdatePersonnelPage() {
     const searchParams = useSearchParams();
     const personnelId = searchParams.get('id'); 
 
-    // 🆕 NEW STATE: To hold fetched positions and handle loading
     const [positions, setPositions] = useState([]);
     const [isLoading, setIsLoading] = useState(true); 
     const [isSubmitting, setIsSubmitting] = useState(false); 

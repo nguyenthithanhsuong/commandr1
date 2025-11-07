@@ -31,7 +31,6 @@ export async function GET(request) {
         if (userData.exp < Date.now()) {
             return NextResponse.json({ error: 'Session expired' }, { status: 401 });
         }
-        console.error('testing 1: ' + userData.id);
         return NextResponse.json({ authenticated: true, user: userData.id });
     } catch (error) {
         console.error('/api/auth/check error parsing token:', error);

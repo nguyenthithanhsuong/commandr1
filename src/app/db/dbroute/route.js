@@ -44,8 +44,11 @@ export async function POST(request) {
             case 'getTaskById':
                 result = await dbOps.getTaskById(params.id);
                 break;
+            case 'getTaskByProjectId':
+                result = await dbOps.getTaskByProjectId(params.id);
+                break; 
             case 'createTask':
-                result = await dbOps.addTask(params.data);
+                result = await dbOps.addTask(params.id, params.data);
                 break;
             case 'updateTask':
                 result = await dbOps.updateTask(params.id, params.data);
@@ -56,6 +59,18 @@ export async function POST(request) {
             //project
             case 'getAllProject':
                 result = await dbOps.getAllProject();
+                break;
+            case 'getProjectById':
+                result = await dbOps.getProjectById(params.id);
+                break;
+            case 'createProject':
+                result = await dbOps.addProject(params.id, params.data);
+                break;
+            case 'updateProject':
+                result = await dbOps.updateProject(params.id, params.data);
+                break;
+            case 'deleteProject':
+                result = await dbOps.deleteProject(params.id);
                 break;
             default:
                 return NextResponse.json(

@@ -4,29 +4,53 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../../components/button/button";
 
-const ASSIGNER_ID = '1'; 
 
 export default function AddTaskPage() {
     const router = useRouter();
 
-    // 🆕 NEW STATES: To hold fetched data and handle loading
     const [personnelList, setPersonnelList] = useState([]);
     const [projectList, setProjectList] = useState([]);
-    const [isLoading, setIsLoading] = useState(true); // Default to true while fetching initial data
+    const [isLoading, setIsLoading] = useState(true);
 
     const [formData, setFormData] = useState({
         taskname: '',
         taskstatus: 'To Do', // Default status
-        assignerid: ASSIGNER_ID, // Hardcoded ID for the creator/assigner
+        assignerid: '1', 
         personnelid: '', // Who the task is assigned to
         projectid: null, // Which project the task belongs to
         description: '',
+        enddate: '', // **NEW: Due Date field**
     });
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
+    
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const response = await fetch('../api/auth/check', { credentials: 'include' });
+                if (!response.ok) {
+                    router.replace('/signin');
+                    return;
+                }
+                const data = await response.json();
+                if (data.user) {
+                    setFormData(prev => ({
+                        ...prev,
+                        assignerid: data.user.toString() // Assuming data.user is the ID
+                    }));
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                router.replace('/signin');
+            }
+        };
+        checkAuth();
+    }, [router]);
+
 
     // --- Data Fetching Hook: Personnel and Projects ---
+
     useEffect(() => {
         const fetchDependencies = async () => {
             try {
@@ -38,17 +62,12 @@ export default function AddTaskPage() {
                 });
                 const personnelData = await personnelResponse.json();
 
-                if (personnelResponse.ok && personnelData.success) {
+                let defaultPersonnelId = '';
+                if (personnelResponse.ok && personnelData.success && personnelData.data.length > 0) {
                     setPersonnelList(personnelData.data);
-                    // Set a default assigned personnel if available (optional)
-                    if (personnelData.data.length > 0) {
-                        setFormData(prev => ({
-                            ...prev,
-                            personnelid: personnelData.data[0].userid.toString(),
-                        }));
-                    }
-                } else {
-                    console.error('Error fetching personnel:', personnelData.error);
+                    defaultPersonnelId = personnelData.data[0].userid.toString();
+                } else if (!personnelResponse.ok || !personnelData.success) {
+                    console.error('Error fetching personnel:', personnelData.error || personnelResponse.statusText);
                 }
 
                 // 2. Fetch All Projects (for project linkage)
@@ -58,19 +77,21 @@ export default function AddTaskPage() {
                     body: JSON.stringify({ operation: 'getAllProject' }),
                 });
                 const projectData = await projectResponse.json();
-
-                if (projectResponse.ok && projectData.success) {
+                
+                let defaultProjectId = null;
+                if (projectResponse.ok && projectData.success && projectData.data.length > 0) {
                     setProjectList(projectData.data);
-                    // Set a default project if available (optional)
-                    if (projectData.data.length > 0) {
-                        setFormData(prev => ({
-                            ...prev,
-                            projectid: projectData.data[0].projectid.toString(),
-                        }));
-                    }
-                } else {
-                    console.error('Error fetching projects:', projectData.error);
+                } else if (!projectResponse.ok || !projectData.success) {
+                     console.error('Error fetching projects:', projectData.error || projectResponse.statusText);
                 }
+                
+                // Set initial form data after fetching lists
+                setFormData(prev => ({
+                    ...prev,
+                    personnelid: defaultPersonnelId || prev.personnelid,
+                    projectid: defaultProjectId || prev.projectid,
+                }));
+                
             } catch (error) {
                 console.error('Fetch dependencies error:', error);
                 setMessage('An unexpected error occurred while fetching personnel and project lists.');
@@ -86,6 +107,7 @@ export default function AddTaskPage() {
         { label: "Task Name", name: "taskname", type: "text", required: true },
         { label: "Task Status", name: "taskstatus", type: "select", options: ["To Do", "In Progress", "Completed"], required: true },
         { label: "Assigned Personnel", name: "personnelid", type: "select-dynamic-personnel", required: true },
+        { label: "Due Date", name: "enddate", type: "date", required: false }, // **NEW FIELD**
         { label: "Related Project", name: "projectid", type: "select-dynamic-project", required: false },
         { label: "Description", name: "description", type: "textarea", required: false },
     ];
@@ -96,7 +118,7 @@ export default function AddTaskPage() {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            // Convert to string to ensure consistency, though IDs are usually numbers
+            // Convert to string for consistency, value from date input is YYYY-MM-DD string
             [name]: value.toString(), 
         }));
     };
@@ -116,6 +138,18 @@ export default function AddTaskPage() {
             return;
         }
 
+        // Prepare data for submission, converting empty string dates/projects to null for DB
+        const dataToSubmit = {
+            ...formData,
+            // Convert empty string date to null for SQL compatibility (if the column allows NULL)
+            enddate: formData.enddate === '' ? null : formData.enddate, 
+            // Convert empty string projectid to null
+            projectid: formData.projectid === '' ? null : formData.projectid,
+        };
+        
+        // Use the assignerid from the state, which is updated in the checkAuth useEffect
+        const currentAssignerId = dataToSubmit.assignerid; 
+
         try {
             const response = await fetch('/db/dbroute', {
                 method: 'POST',
@@ -124,9 +158,10 @@ export default function AddTaskPage() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    operation: 'createTask', // The operation defined in your server actions
+                    operation: 'createTask', 
                     params: {
-                        data: formData, // Pass all task data
+                        id: currentAssignerId, // Use ID from state/fetched data
+                        data: dataToSubmit, // Pass prepared task data
                     },
                 }),
             });
@@ -250,7 +285,7 @@ export default function AddTaskPage() {
                                         <select
                                             id={field.name}
                                             name={field.name}
-                                            value={formData[field.name]}
+                                            value={formData[field.name] || ""} // Use "" for the 'No Project' option to be selected if projectid is null
                                             onChange={handleChange}
                                             required={field.required}
                                             className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -274,7 +309,7 @@ export default function AddTaskPage() {
                                             className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     ) : (
-                                        // Standard text input for Task Name
+                                        // Standard text or date input (including the new 'date' type)
                                         <input
                                             id={field.name}
                                             name={field.name}

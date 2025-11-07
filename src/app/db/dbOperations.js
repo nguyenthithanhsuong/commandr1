@@ -38,6 +38,7 @@ export async function getPositions() {
         return { success: false, error: "Failed to fetch positions" };
     }
 }
+
 // Load All Personnel
 export async function getAllPersonnel() {
     try {
@@ -309,6 +310,9 @@ export async function retirePersonnel(id)
         return { success: false, error: "Failed to update personnel" };
     }
 }
+
+
+
 //View Task
 export async function getAllTask() {
     try {
@@ -320,6 +324,7 @@ export async function getAllTask() {
                 A.Name AS assignername,
                 P.Name AS personnelname,
                 T.CreationDate AS creationdate,
+                T.Enddate AS enddate,
                 Pro.ProjectName AS projectname,
                 T.Description AS description
             FROM
@@ -349,6 +354,7 @@ export async function getTaskById(id) {
                 A.Name AS assignername,
                 P.Name AS personnelname,
                 T.CreationDate AS creationdate,
+                T.enddate as enddate,
                 Pro.ProjectName AS projectname,
                 T.Description AS description
             FROM
@@ -363,30 +369,61 @@ export async function getTaskById(id) {
                 T.TaskID = ?
         `;
         const [rows] = await db.execute(query, [id]);
-        if (rows.length === 0) {
-            return { success: false, error: "Task not found" };
-        }
         return { success: true, data: rows[0] };
     } catch (error) {
         console.error("Get task by ID error:", error);
         return { success: false, error: "Failed to fetch task" };
     }
-}  
+} 
+// View Task by Project Id
+export async function getTaskByProjectId(id) {
+    try {
+        const query = `
+            SELECT
+                T.TaskID AS taskid,
+                T.TaskName AS taskname,
+                T.TaskStatus AS taskstatus,
+                A.Name AS assignername,
+                P.Name AS personnelname,
+                T.CreationDate AS creationdate,
+                T.Enddate as enddate,
+                Pro.ProjectName AS projectname,
+                T.Description AS description
+            FROM
+                Task as T
+            LEFT JOIN
+                personnel AS A ON T.AssignerID = A.UserID
+            LEFT JOIN
+                personnel AS P ON T.PersonnelID = P.UserID
+            LEFT JOIN
+                project as Pro on T.ProjectID = Pro.ProjectID
+            WHERE
+                T.ProjectID = ?
+        `;
+        const [rows] = await db.execute(query, [id]);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get task by ID error:", error);
+        return { success: false, error: "Failed to fetch task" };
+    }
+} 
+
 // Add Task
-export async function addTask(data) {
+export async function addTask(id, data) {
     try {
         const query = `
         INSERT into Task
-        (TaskName, TaskStatus, AssignerID, PersonnelID, ProjectID, Description)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (TaskName, TaskStatus, AssignerID, PersonnelID, ProjectID, Description, Enddate)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         const [result] = await db.execute(query, [
             data.taskname,
             data.taskstatus,
-            data.assignerid,
+            id,
             data.personnelid,
             data.projectid,
-            data.description
+            data.description,
+            data.enddate
         ]);
         return { success: true, data: result };
     }
@@ -396,7 +433,7 @@ export async function addTask(data) {
     }
 }
 //Update Task
-export async function updateTask(data) {
+export async function updateTask(id, data) {
     try {
         const taskUpdateQuery = `
             UPDATE Task SET
@@ -404,7 +441,8 @@ export async function updateTask(data) {
                 TaskStatus = ?,
                 PersonnelID = ?,
                 ProjectID = ?,
-                Description = ?
+                Description = ?,
+                Enddate = ?
             WHERE TaskID = ?
             `
         const [taskResult] = await db.execute(taskUpdateQuery, [
@@ -413,6 +451,7 @@ export async function updateTask(data) {
             data.personnelid,
             data.projectid,
             data.description,
+            data.enddate,
             id
         ]);
         return { success: true, rowsAffected: taskResult.affectedRows };
@@ -420,8 +459,7 @@ export async function updateTask(data) {
         console.error("Update task error:", error);
         return { success: false, error: "Failed to update task" };
     }
-}
-        
+}   
 //Delete Task
 export async function deleteTask(id) {
     try {   
@@ -440,6 +478,7 @@ export async function deleteTask(id) {
         return { success: false, error: "Failed to delete task" };
     }
 }
+
 
 //View Project
 export async function getAllProject() {
@@ -465,4 +504,100 @@ export async function getAllProject() {
     }
 }
 
- 
+ export async function getProjectById(id) {
+    try {
+        const query = `
+            SELECT
+                P.ProjectID AS projectid,
+                P.ProjectName AS projectname,
+                P.ProjectStatus AS projectstatus,
+                P.CreationDate AS creationdate,
+                P.Description AS description,
+                P.AssignerID AS assignerid,
+                A.Name AS assignername
+            FROM
+                Project as P
+            LEFT JOIN
+                personnel AS A ON P.AssignerID = A.UserID
+            WHERE
+                P.ProjectID = ?
+        `;
+        const [rows] = await db.execute(query, [id]);
+        if (rows.length === 0) {
+            return { success: false, error: "Project not found" };
+        }
+        return { success: true, data: rows[0] };
+    } catch (error) {
+        console.error("Get project by ID error:", error);
+        return { success: false, error: "Failed to fetch project" };
+    }
+}
+
+// Add Project
+export async function addProject(id, data) {
+    try {
+        // Note: Assuming ProjectID and CreationDate are handled by the database
+        const query = `
+            INSERT INTO Project
+            (ProjectName, ProjectStatus, Description, AssignerID)
+            VALUES (?, ?, ?, ?)
+        `;
+        const [result] = await db.execute(query, [
+            data.projectname,
+            data.projectstatus,
+            data.description,
+            id // AssignerID is the UserID of the person creating/managing the project
+        ]);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Add project error:", error);
+        return { success: false, error: "Failed to add project" };
+    }
+}
+
+// Update Project
+export async function updateProject(id, data) {
+    try {
+        const projectUpdateQuery = `
+            UPDATE Project SET
+                ProjectName = ?,
+                ProjectStatus = ?,
+                Description = ?,
+                AssignerID = ?
+            WHERE ProjectID = ?
+        `;
+        const [projectResult] = await db.execute(projectUpdateQuery, [
+            data.projectname,
+            data.projectstatus,
+            data.description,
+            data.assignerid,
+            id
+        ]);
+        return { success: true, rowsAffected: projectResult.affectedRows };
+    } catch (error) {
+        console.error("Update project error:", error);
+        return { success: false, error: "Failed to update project" };
+    }
+}
+
+// Delete Project
+export async function deleteProject(id) {
+    try {
+        // Important: You may need to handle foreign key constraints 
+        // (e.g., associated Tasks) before deleting the project. 
+        // For this function, we assume cascading delete or no existing tasks.
+
+        const query = `DELETE FROM Project WHERE ProjectID = ?;`;
+        const [projectResult] = await db.execute(
+            query,
+            [id]
+        );
+        if (projectResult.affectedRows === 0) {
+            console.warn(`Project with ID ${id} not found for deletion.`);
+        }
+        return { success: true, message: "Project successfully deleted." };
+    } catch (error) {
+        console.error("Delete project error:", error);
+        return { success: false, error: "Failed to delete project" };
+    }
+}

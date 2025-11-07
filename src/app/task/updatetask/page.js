@@ -5,72 +5,70 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation"; 
 import Button from "../../components/button/button";
 
-// NOTE: In a real application, the current user's ID (the assigner) 
-// would come from an authentication context/session. We'll hardcode it for this example.
-const ASSIGNER_ID = '1'; 
-
 export default function UpdateTaskPage() { // Renamed component
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const taskId = searchParams.get('id'); // ⭐ GET THE TASK ID FROM THE URL
-
-    // --- State Initialization ---
-    const [personnelList, setPersonnelList] = useState([]);
-    const [projectList, setProjectList] = useState([]);
+        const router = useRouter();
+        const searchParams = useSearchParams();
+        const taskId = searchParams.get('id'); 
     
-    // ⭐ New state for the initial task data
-    const [initialTaskData, setInitialTaskData] = useState(null); 
-
-    const [isLoading, setIsLoading] = useState(true); 
-    const [formData, setFormData] = useState({
-        taskname: '',
-        taskstatus: 'To Do', 
-        assignerid: ASSIGNER_ID,
-        personnelid: '', 
-        projectid: '', 
-        description: '',
-    });
+        const [personnelList, setPersonnelList] = useState([]);
+        const [projectList, setProjectList] = useState([]);
+        const [isLoading, setIsLoading] = useState(true); 
+        
+            const [isSubmitting, setIsSubmitting] = useState(false); 
+            const [message, setMessage] = useState('');
     
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [message, setMessage] = useState('');
-
-    // --- Data Fetching Hook: Task, Personnel, and Projects ---
+        const [formData, setFormData] = useState({
+                taskname: '',
+                taskstatus: 'To Do', // Default status
+                personnelname: '',
+                projectname: '',
+                description: '',
+                enddate: '', // **NEW: Due Date field**
+            });
+        
+        const formatInputDate = (dateString) => {
+        return dateString ? new Date(dateString).toISOString().substring(0, 10) : '';
+    };
+        //fetch assigner id
+            useEffect(() => {
+                    const checkAuth = async () => {
+                        try {
+                            const response = await fetch('../api/auth/check', { credentials: 'include' });
+                            if (!response.ok) {
+                                router.replace('/signin');
+                                return;
+                            }
+                            const data = await response.json();
+                if (data.user) {
+                    setFormData(prev => ({
+                        ...prev,
+                        assignerid: data.user.toString() // Assuming data.user is the ID
+                    }));
+                }
+                        } catch (error) {
+                            console.error('Auth check failed:', error);
+                            router.replace('/signin');
+                        }
+                    };
+                    checkAuth();
+                }, [router]);
+                
     useEffect(() => {
-        if (!taskId) {
-            setMessage("Error: No Task ID provided for update.");
-            setIsLoading(false);
-            return;
-        }
-
         const fetchDependencies = async () => {
+            let taskData = null;
             try {
                 // 0. Fetch Specific Task Data
                 const taskResponse = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    // Operation needs to be 'getTaskById'
                     body: JSON.stringify({ operation: 'getTaskById', params: { id: taskId } }), 
                 });
-                const taskData = await taskResponse.json();
-
-                if (taskResponse.ok && taskData.success) {
-                    setInitialTaskData(taskData.data);
-                    // ⭐ Initialize form data with fetched task values (using their ID fields)
-                    setFormData({
-                        taskname: taskData.data.taskname,
-                        taskstatus: taskData.data.taskstatus,
-                        assignerid: ASSIGNER_ID, 
-                        personnelid: taskData.data.personnelid?.toString() || '',
-                        projectid: taskData.data.projectid?.toString() || '', 
-                        description: taskData.data.description || '',
-                    });
+                const data = await taskResponse.json();
+                if (taskResponse.ok && data.success) {
+                    taskData = data.data;
                 } else {
                     console.error('Error fetching task:', taskData.error);
-                    setMessage(`Could not load task with ID ${taskId}. ${taskData.error}`);
-                    setIsLoading(false);
-                    return; // Stop if the task can't be loaded
                 }
-
 
                 // 1. Fetch All Personnel Active
                 const personnelResponse = await fetch('/db/dbroute', {
@@ -79,12 +77,14 @@ export default function UpdateTaskPage() { // Renamed component
                     body: JSON.stringify({ operation: 'getAllPersonnelActive' }),
                 });
                 const personnelData = await personnelResponse.json();
-                if (personnelResponse.ok && personnelData.success) {
-                    setPersonnelList(personnelData.data);
-                } else {
-                    console.error('Error fetching personnel:', personnelData.error);
-                }
 
+                let defaultPersonnelId = '';
+                if (personnelResponse.ok && personnelData.success && personnelData.data.length > 0) {
+                    setPersonnelList(personnelData.data);
+                    defaultPersonnelId = personnelData.data[0].userid.toString();
+                } else if (!personnelResponse.ok || !personnelData.success) {
+                    console.error('Error fetching personnel:', personnelData.error || personnelResponse.statusText);
+                }
                 // 2. Fetch All Projects
                 const projectResponse = await fetch('/db/dbroute', {
                     method: 'POST',
@@ -92,15 +92,30 @@ export default function UpdateTaskPage() { // Renamed component
                     body: JSON.stringify({ operation: 'getAllProject' }),
                 });
                 const projectData = await projectResponse.json();
-                if (projectResponse.ok && projectData.success) {
-                    setProjectList(projectData.data);
-                } else {
-                    console.error('Error fetching projects:', projectData.error);
-                }
                 
-            } catch (error) {
+                if (projectResponse.ok && projectData.success && projectData.data.length > 0) {
+                    setProjectList(projectData.data);
+                } else if (!projectResponse.ok || !projectData.success) {
+                     console.error('Error fetching projects:', projectData.error || projectResponse.statusText);
+                }
+
+                if (taskData) {
+                // Map fetched data to form state, including the newly fetched positionid
+                setFormData({
+                taskname: taskData.taskname,
+                taskstatus: taskData.taskstatus, 
+                personnelname: taskData.name,
+                projectname: taskData.projectname,
+                description: taskData.description,
+                enddate: taskData.enddate || null,
+                });
+            }
+            else{
+                setMessage('Task details not found or could not be loaded.');
+                setFormData(false);
+            }
+         } catch (error) {
                 console.error('Fetch dependencies error:', error);
-                setMessage('An unexpected error occurred while fetching task details, personnel, and project lists.');
             } finally {
                 setIsLoading(false);
             }
@@ -114,6 +129,7 @@ export default function UpdateTaskPage() { // Renamed component
         { label: "Task Status", name: "taskstatus", type: "select", options: ["To Do", "In Progress", "Completed"], required: true },
         { label: "Assigned Personnel", name: "personnelid", type: "select-dynamic-personnel", required: true },
         { label: "Related Project", name: "projectid", type: "select-dynamic-project", required: false },
+        { label: "Due Date", name: "enddate", type: "date", required: false }, // **NEW FIELD**
         { label: "Description", name: "description", type: "textarea", required: false },
     ];
 
@@ -123,7 +139,7 @@ export default function UpdateTaskPage() { // Renamed component
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: value.toString(), 
+            [name]: value,
         }));
     };
 
@@ -133,11 +149,11 @@ export default function UpdateTaskPage() { // Renamed component
         setIsSubmitting(true);
 
         // Basic validation
-        const requiredFields = ['taskname', 'taskstatus', 'personnelid'];
+        const requiredFields = ['taskname', 'taskstatus'];
         const isValid = requiredFields.every(field => formData[field]);
 
         if (!isValid) {
-            setMessage("Please fill in all required fields (Task Name, Status, and Assigned Personnel).");
+            setMessage("Please fill in all required fields.");
             setIsSubmitting(false);
             return;
         }
@@ -162,19 +178,19 @@ export default function UpdateTaskPage() { // Renamed component
             const data = await response.json();
 
             if (response.ok && data.success) {
-                setMessage(`Success! Task '${formData.taskname}' updated.`);
+                setMessage(`✅ Success! Task '${formData.taskname}' updated.`);
                 
                 setTimeout(() => {
                     router.replace('/task'); 
                 }, 1500);
 
             } else {
-                setMessage(`Error: Failed to update task. ${data.error || 'Unknown error.'}`);
+                setMessage(`❌ Error: Failed to update Task. ${data.error || 'Unknown error.'}`);
             }
 
         } catch (error) {
+            setMessage('❌ An unexpected error occurred during submission.');
             console.error('Submission error:', error);
-            setMessage('An unexpected error occurred during submission.');
         } finally {
             setIsSubmitting(false);
         }
@@ -186,16 +202,6 @@ export default function UpdateTaskPage() { // Renamed component
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <p className="text-xl font-semibold text-gray-600">Loading task details... 🔄</p>
-            </div>
-        );
-    }
-
-    if (!initialTaskData) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <p className="text-xl font-semibold text-red-600">
-                    Task Not Found or an Error Occurred.
-                </p>
             </div>
         );
     }
@@ -229,7 +235,7 @@ export default function UpdateTaskPage() { // Renamed component
             <div className="flex-grow p-4 md:p-8">
                 <div className="max-w-4xl mx-auto bg-white p-6 md:p-10 rounded-xl shadow-2xl">
                     <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">
-                        Edit Task: **{initialTaskData.taskname}** 📝
+                        Edit Task: **{formData.taskname}** 📝
                     </h1>
                     
                     {/* Status Message */}

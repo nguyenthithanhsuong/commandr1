@@ -7,7 +7,6 @@ import Button from "../components/button/button"; // Adjust path as needed
 export default function TaskPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
-    // Renamed state from 'users' to 'tasks' for clarity
     const [tasks, setTasks] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -174,6 +173,7 @@ export default function TaskPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
                         <th className-="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigner</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creation Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                     </tr>
                     </thead>
@@ -199,6 +199,7 @@ export default function TaskPage() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.personnelname || 'Unassigned'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{task.assignername || 'System'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(task.creationdate)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(task.enddate)}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{task.description}</td>
                             </tr>
                         ))}

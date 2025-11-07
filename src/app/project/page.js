@@ -146,7 +146,7 @@ export default function ProjectPage() {
             <div className="flex justify-between items-center my-4">
                 <h1 className="text-2xl font-bold">Project List 📁</h1>
                 <Button
-                    text="Create Project"
+                    text="Add New Project"
                     style="Filled" 
                     className="text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 p-2 text-sm rounded-md shadow-md transition duration-150" 
                     onClick={() => {
@@ -168,6 +168,7 @@ export default function ProjectPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigner</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creation Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                     </tr>
                     </thead>
@@ -191,6 +192,7 @@ export default function ProjectPage() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{project.assignername || 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(project.creationdate)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(project.enddate)}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{project.description}</td>
                             </tr>
                         ))}

@@ -59,7 +59,6 @@ export default function ViewTaskPage() {
                 if (response.ok && data.data) {
                     setTask(data.data); // Set the fetched task data
                 } else {
-                    console.error('Failed to fetch task by ID:', data.error || 'Task not found.');
                     setTask(null);
                 }
             } catch (error) {
@@ -74,7 +73,6 @@ export default function ViewTaskPage() {
     // --- Action Handlers ---
 
     const handleUpdate = () => {
-        // Navigate to the edit task page, passing the task ID
         router.push(`/task/updatetask?id=${taskid}`);
     };
 
@@ -179,6 +177,7 @@ export default function ViewTaskPage() {
                         <DetailRow label="Assigned To" value={task.personnelname || 'Unassigned'} />
                         <DetailRow label="Assigned By" value={task.assignername || 'N/A'} />
                         <DetailRow label="Creation Date" value={formatDate(task.creationdate)} />
+                        <DetailRow label="End Date" value={formatDate(task.enddate) || 'N/A'} />
                     </div>
 
                     <h2 className="text-2xl font-bold text-gray-800 mt-8 mb-6 border-b pb-3">Description</h2>

@@ -40,7 +40,6 @@ export default function AddPersonnelPage() {
                     }
                     const data = await response.json();
                     AssignerID=data.user;
-                    console.error('hehe: ' + AssignerID);
                 } catch (error) {
                     console.error('Auth check failed:', error);
                     router.replace('/signin');
