@@ -45,7 +45,6 @@ export default function SignInPage() {
                 return;
             }
             
-            alert("Sign-in successful!");
             ID = result.userid;
             
             router.push('/personnel');

@@ -22,20 +22,175 @@ export async function authenticateUser(email, password) {
 export async function getPositions() {
     try {
         const query = `
-            SELECT 
-                PositionID AS positionid,
-                PositionName AS positionname,
-                DepartmentID AS departmentid
-            FROM 
-                position
-            ORDER BY 
-                PositionID
+            SELECT
+                P.PositionID AS positionid,
+                P.PositionName AS positionname,
+                D.DepartmentName AS departmentname,
+                P.BaseSalary AS salary,
+                D.DepartmentId AS departmentid
+            FROM
+                Position as P
+            LEFT JOIN
+                Department as D ON P.DepartmentID = D.DepartmentID
         `;
         const [rows] = await db.execute(query);
         return { success: true, data: rows };
     } catch (error) {
-        console.error("Get positions error:", error);
-        return { success: false, error: "Failed to fetch positions" };
+        console.error("Get position error:", error);
+        return { success: false, error: "Failed to fetch position" };
+    }
+}
+
+
+export async function getDepartments()
+{
+    try
+    {
+        const query = `
+        SELECT departmentid, departmentname
+        FROM Department
+        ORDER BY departmentid ASC`;
+
+        const [results] = await db.execute(query);
+
+        return { success: true, data: results };
+    } catch (error) {
+        console.error("Get departments error:", error);
+        return { success: false, error: "Failed to fetch departments" };
+    }
+}
+
+export async function addDepartment(data)
+{
+    try
+    {
+        const query = `
+        INSERT INTO DEPARTMENT (departmentname)
+        VALUES (?)`;
+
+        const [result] = await db.execute(query, [
+            data.departmentname
+        ]);
+
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Add department error:", error);
+        return { success: false, error: "Failed to add department" };
+    }
+}
+
+export async function addPosition(data)
+{
+    try
+    {
+        const query = `
+        INSERT INTO \`position\` (positionname, departmentid, basesalary)
+        VALUES (?, ?, ?)`;
+
+        const [result] = await db.execute(query, [
+            data.positionname,
+            data.departmentid,
+            data.salary
+        ]);
+
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Add position error:", error);
+        return { success: false, error: "Failed to add position" };
+    }
+}
+
+export async function updatePosition(id, data) {
+    try {
+        // Constructing the UPDATE query for the Position table
+        const query = `
+            UPDATE \`position\`
+            SET positionname = ?, departmentid = ?, basesalary = ?
+            WHERE PositionID = ?;
+        `;
+
+        const [result] = await db.execute(query, [
+            data.positionname,
+            data.departmentid,
+            data.salary, // Assuming 'salary' from the data object maps to 'basesalary' column
+            id
+        ]);
+
+        // Check if a row was actually affected/updated
+        if (result.affectedRows === 0) {
+            return { success: false, error: "Position not found or no changes made" };
+        }
+
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Update position error:", error);
+        return { success: false, error: "Failed to update position" };
+    }
+}
+
+export async function updateDepartment(id, data) {
+    try {
+        // Constructing the UPDATE query for the Position table
+        const query = `
+            UPDATE department
+            SET departmentname = ?
+            WHERE departmentid = ?;
+        `;
+
+        const [result] = await db.execute(query, [
+            data.departmentname,
+            id
+        ]);
+
+        // Check if a row was actually affected/updated
+        if (result.affectedRows === 0) {
+            return { success: false, error: "Department not found or no changes made" };
+        }
+
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Update Department error:", error);
+        return { success: false, error: "Failed to update Department" };
+    }
+}
+
+export async function deletePosition(id) {
+    try {   
+        const query = `DELETE FROM Position WHERE PositionID = ?;`;
+        const [taskResult] = await db.execute(
+            query,
+            [id]
+        );
+        if (taskResult.affectedRows === 0) {
+                // Log but still return success if the record wasn't found (idempotent delete)
+                console.warn(`Position with ID ${id} not found for deletion.`);
+        }
+        return { success: true, message: "Position successfully deleted." };
+    } catch (error) {
+        console.error("Delete position error:", error);
+        return { success: false, error: "Failed to delete position" };
+    }
+}
+
+export async function deleteDepartment(id) {
+    try {   
+        const query = `UPDATE Position Set DepartmentID = '0' WHERE DepartmentID = ?`;
+        const [taskresult] = await db.execute(
+            query,
+            [id]
+        );
+        const query2 = `DELETE FROM Department WHERE DepartmentID = ?;`;
+        const [taskResult] = await db.execute(
+            query2,
+            [id]
+        );
+        if (taskResult.affectedRows === 0) {
+                console.warn(`Department with ID ${id} not found for deletion.`);
+        }
+        return { success: true, message: "Department successfully deleted." };
+    } catch (error) {
+        console.error("Delete Department error:", error);
+        return { success: false, error: "Failed to delete Department" };
     }
 }
 
@@ -353,9 +508,11 @@ export async function getTaskById(id) {
                 T.TaskStatus AS taskstatus,
                 A.Name AS assignername,
                 P.Name AS personnelname,
+                P.UserID AS personnelid,
                 T.CreationDate AS creationdate,
                 T.enddate as enddate,
                 Pro.ProjectName AS projectname,
+                Pro.ProjectID AS projectid,
                 T.Description AS description
             FROM
                 Task as T
@@ -562,15 +719,13 @@ export async function updateProject(id, data) {
             UPDATE Project SET
                 ProjectName = ?,
                 ProjectStatus = ?,
-                Description = ?,
-                AssignerID = ?
+                Description = ?
             WHERE ProjectID = ?
         `;
         const [projectResult] = await db.execute(projectUpdateQuery, [
             data.projectname,
             data.projectstatus,
             data.description,
-            data.assignerid,
             id
         ]);
         return { success: true, rowsAffected: projectResult.affectedRows };
@@ -600,4 +755,185 @@ export async function deleteProject(id) {
         console.error("Delete project error:", error);
         return { success: false, error: "Failed to delete project" };
     }
+}
+
+//Fetch Request:
+export async function getAllRequest() {
+    try {
+        const query = `
+            SELECT
+                R.RequestID AS requestid,
+                R.RequesterID AS requesterid,
+                Req.Name AS requestername,
+                R.ApproverID AS approverid,
+                App.Name AS approvername,
+                R.RequestType AS type,
+                R.Description AS description,
+                R.Status AS requeststatus,
+                R.CreatedAt AS creationdate
+            FROM
+                Request as R
+            LEFT JOIN
+                personnel AS Req ON R.RequesterID = Req.UserID
+            LEFT JOIN
+                personnel AS App ON R.ApproverID = App.UserID
+        `;
+        const [rows] = await db.execute(query);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get request error:", error);
+        return { success: false, error: "Failed to fetch request" };
+    }
+}
+
+export async function updateRequestStatus(id, data, status) {
+    try {
+        const projectUpdateQuery = `
+            UPDATE Request SET
+                Status = ?,
+                ApproverID = ?
+            WHERE RequestID = ?
+        `;
+        const [requestResults] = await db.execute(projectUpdateQuery, [
+            status,
+            data,
+            id
+        ]);
+        return { success: true, rowsAffected: requestResults.affectedRows };
+    } catch (error) {
+        console.error("Update request error:", error);
+        return { success: false, error: "Failed to update request" };
+    }
+}
+
+export async function deleteRequest(id) {
+    try {   
+        const query = `DELETE FROM Request WHERE RequestID = ?;`;
+        const [requestResults] = await db.execute(
+            query,
+            [id]
+        );
+        return { success: true, message: "Request successfully deleted." };
+    } catch (error) {
+        console.error("Delete Request error:", error);
+        return { success: false, error: "Failed to Request position" };
+    }
+}
+
+export async function addRequest(data) {
+    try {
+        // Note: Assuming ProjectID and CreationDate are handled by the database
+        const query = `
+            INSERT INTO Request
+            (RequesterID, ApproverID, RequestType, Description, Status, CreatedAt)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const [result] = await db.execute(query, [
+            data.requesterid,
+            null,
+            data.requesttype,
+            data.description,
+            data.status,
+            data.creationdate
+        ]);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Add Request error:", error);
+        return { success: false, error: "Failed to add Request" };
+    }
+}
+
+export async function getAttendance() {
+  try {
+    let query = `
+  SELECT 
+    a.UserID AS UserID,
+    p.Name AS Name,
+    a.AttendanceDate,
+    a.CheckInStatus,
+    a.CheckInDateTime,
+    a.CheckOutStatus,
+    a.CheckOutDateTime
+  FROM Attendance a
+  JOIN Personnel p ON a.UserID = p.UserID;
+`;
+
+    const [rows] = await db.execute(query);
+    return { success: true, data: rows };
+  } catch (error) {
+    console.error("Failed to fetch Attendance: ", error);
+    return { success: false, error: "Failed to fetch Attendance" };
+  }
+}
+
+
+export async function createAttendance()
+{
+    try
+    {
+        const query = `
+        INSERT INTO Attendance (UserID, AttendanceDate, CheckInStatus)
+            SELECT p.UserID, CURDATE(), 'pending'
+            FROM Personnel p
+            WHERE NOT EXISTS (
+    SELECT 1 
+    FROM Attendance a
+    WHERE a.UserID = p.UserID
+      AND a.AttendanceDate = CURDATE()
+            )
+        `;
+        const [result] = await db.execute(query);
+        return { success: true, data: result };
+    }
+    catch (error)
+    {
+        console.error("Failed to generate Attendance: ", error);
+        return { success: false, error: "Failed to generate Attendance"};
+    }
+}
+
+export async function checkIn(id, date) {
+    console.log("checkIn params =>", id, date);
+  try {
+    const query = `
+      UPDATE Attendance
+      SET CheckInStatus = 'checked_in',
+          CheckInDateTime = NOW()
+      WHERE UserID = ?
+        AND AttendanceDate = CURDATE()
+        AND CheckInStatus = 'pending';
+    `;
+
+    const [result] = await db.execute(query, [id]);
+    if (result.affectedRows === 0) {
+            console.warn(`Attendance with ID ${id} not found.`);
+        }
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Failed to check in: ", error);
+    return { success: false, error: "Failed to check in" };
+  }
+}
+
+export async function checkOut(id, date) {
+  try {
+    const query = `
+      UPDATE Attendance
+      SET CheckOutStatus = 'checked_out',
+          CheckOutDateTime = NOW()
+      WHERE UserID = ?
+        AND AttendanceDate = CURDATE()
+        AND CheckInStatus = 'checked_in'
+        AND CheckOutStatus = 'not_checked_out';
+    `;
+
+    const [result] = await db.execute(query, [id]);
+    if (result.affectedRows === 0) {
+            console.warn(`Attendance with ID ${id} not found.`);
+        }
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Failed to check out: ", error);
+    return { success: false, error: "Failed to check out" };
+  }
 }

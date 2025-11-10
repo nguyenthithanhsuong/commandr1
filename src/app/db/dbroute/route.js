@@ -34,8 +34,29 @@ export async function POST(request) {
                     result = await dbOps.retirePersonnel(params.id);
                     break;
             //position
-            case 'getPositions':
+            case 'getPosition':
                 result = await dbOps.getPositions();
+                break;
+            case 'addPosition':
+                result = await dbOps.addPosition(params.data);
+                break;
+            case 'updatePosition':
+                result = await dbOps.updatePosition(params.id, params.data);
+                break;
+            case 'deletePosition':
+                result = await dbOps.deletePosition(params.id);
+                break;
+            case 'getDepartments':
+                result = await dbOps.getDepartments();
+                break;
+            case 'addDepartment':
+                result = await dbOps.addDepartment(params.data);
+                break;
+            case 'updateDepartment':
+                result = await dbOps.updateDepartment(params.id, params.data);
+                break;
+            case 'deleteDepartment':
+                result = await dbOps.deleteDepartment(params.id);
                 break;
             //task
             case 'getAllTask':
@@ -71,6 +92,32 @@ export async function POST(request) {
                 break;
             case 'deleteProject':
                 result = await dbOps.deleteProject(params.id);
+                break;
+            //requeest:
+            case 'getAllRequest':
+                result = await dbOps.getAllRequest();
+                break;
+            case 'createRequest':
+                result = await dbOps.addRequest(params.data);
+                break;
+            case 'updateRequestStatus':
+                result = await dbOps.updateRequestStatus(params.id, params.data, params.status)
+                break;
+            case 'deleteRequest':
+                result = await dbOps.deleteRequest(params.id);
+                break;
+            //attendance
+            case 'getAttendance':
+                result  = await dbOps.getAttendance();
+                break;
+            case 'createAttendance':
+                result = await dbOps.createAttendance();
+                break;
+            case 'checkIn':
+                result = await dbOps.checkIn(params.id, params.date);
+                break;
+            case 'checkOut':
+                result = await dbOps.checkOut(params.id, params.date);
                 break;
             default:
                 return NextResponse.json(

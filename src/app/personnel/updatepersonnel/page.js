@@ -54,7 +54,7 @@ export default function UpdatePersonnelPage() {
                 const positionsResponse = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ operation: 'getPositions' }),
+                    body: JSON.stringify({ operation: 'getPosition' }),
                 });
                 const posData = await positionsResponse.json();
                 if (positionsResponse.ok && posData.success) {

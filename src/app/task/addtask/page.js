@@ -11,11 +11,12 @@ export default function AddTaskPage() {
     const [personnelList, setPersonnelList] = useState([]);
     const [projectList, setProjectList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    const [AssignerID, setAssignerID] = useState([]);
 
     const [formData, setFormData] = useState({
         taskname: '',
         taskstatus: 'To Do', // Default status
-        assignerid: '1', 
         personnelid: '', // Who the task is assigned to
         projectid: null, // Which project the task belongs to
         description: '',
@@ -34,12 +35,7 @@ export default function AddTaskPage() {
                     return;
                 }
                 const data = await response.json();
-                if (data.user) {
-                    setFormData(prev => ({
-                        ...prev,
-                        assignerid: data.user.toString() // Assuming data.user is the ID
-                    }));
-                }
+                setAssignerID(data.user);
             } catch (error) {
                 console.error('Auth check failed:', error);
                 router.replace('/signin');
@@ -146,10 +142,7 @@ export default function AddTaskPage() {
             // Convert empty string projectid to null
             projectid: formData.projectid === '' ? null : formData.projectid,
         };
-        
-        // Use the assignerid from the state, which is updated in the checkAuth useEffect
-        const currentAssignerId = dataToSubmit.assignerid; 
-
+        alert(AssignerID);
         try {
             const response = await fetch('/db/dbroute', {
                 method: 'POST',
@@ -160,7 +153,7 @@ export default function AddTaskPage() {
                 body: JSON.stringify({
                     operation: 'createTask', 
                     params: {
-                        id: currentAssignerId, // Use ID from state/fetched data
+                        id: AssignerID, // Use ID from state/fetched data
                         data: dataToSubmit, // Pass prepared task data
                     },
                 }),

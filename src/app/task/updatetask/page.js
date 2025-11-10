@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-// We need to use 'useSearchParams' to get the task ID from the URL
 import { useRouter, useSearchParams } from "next/navigation"; 
 import Button from "../../components/button/button";
 
@@ -20,6 +19,7 @@ export default function UpdateTaskPage() { // Renamed component
         const [formData, setFormData] = useState({
                 taskname: '',
                 taskstatus: 'To Do', // Default status
+                personnelid:'',
                 personnelname: '',
                 projectname: '',
                 description: '',
@@ -104,8 +104,10 @@ export default function UpdateTaskPage() { // Renamed component
                 setFormData({
                 taskname: taskData.taskname,
                 taskstatus: taskData.taskstatus, 
+                personnelid: taskData.personnelid,
                 personnelname: taskData.name,
                 projectname: taskData.projectname,
+                projectid: taskData.projectid,
                 description: taskData.description,
                 enddate: taskData.enddate || null,
                 });
@@ -157,7 +159,7 @@ export default function UpdateTaskPage() { // Renamed component
             setIsSubmitting(false);
             return;
         }
-
+        //alert(taskId + ' ' +formData.taskname + ' '+ formData.taskstatus + ' ' + formData.personnelid + ' ' + formData.projectid + ' ' + formData.description + ' ' + formData.eddate);
         try {
             const response = await fetch('/db/dbroute', {
                 method: 'POST',

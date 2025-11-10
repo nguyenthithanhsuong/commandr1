@@ -4,13 +4,13 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../components/button/button";
 
-let AssignerID=0;
-
 export default function PersonnelPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    const [AssignerID, setAssignerID] = useState([]);
     
     // State to control if inactive users (isactive = 0) are shown (Default is false)
     const [showInactive, setShowInactive] = useState(false); 
@@ -75,7 +75,7 @@ export default function PersonnelPage() {
                     return;
                 }
                 const data = await response.json();
-                AssignerID=data.user;
+                setAssignerID(data.user);
             } catch (error) {
                 console.error('Auth check failed:', error);
                 router.replace('/signin');

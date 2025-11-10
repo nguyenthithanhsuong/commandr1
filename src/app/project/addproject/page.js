@@ -34,7 +34,6 @@ export default function AddProjectPage() {
                 }
                 const data = await response.json();
                 
-                // Set the fetched AssignerID (UserID of the logged-in user)
                 setAssignerId(data.user); 
                 setIsLoading(false); // Finished initial loading
             } catch (error) {

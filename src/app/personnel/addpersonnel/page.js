@@ -13,6 +13,7 @@ export default function AddPersonnelPage() {
     // 🆕 NEW STATE: To hold fetched positions and handle loading
     const [positions, setPositions] = useState([]);
     const [isLoading, setIsLoading] = useState(true); // ⬅️ Set default to true now
+    const [AssignerID, setAssignerID] = useState([]);
     
     const [user, setUser] = useState(null); 
 
@@ -29,7 +30,6 @@ export default function AddPersonnelPage() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
-    let AssignerID=0;
     useEffect(() => {
             const checkAuth = async () => {
                 try {
@@ -39,7 +39,7 @@ export default function AddPersonnelPage() {
                         return;
                     }
                     const data = await response.json();
-                    AssignerID=data.user;
+                    setAssignerID(data.user);
                 } catch (error) {
                     console.error('Auth check failed:', error);
                     router.replace('/signin');
@@ -49,6 +49,7 @@ export default function AddPersonnelPage() {
         }, [router]);
 
 
+
     useEffect(() => {
         async function fetchPositions() {
             try {
@@ -56,7 +57,7 @@ export default function AddPersonnelPage() {
                 const response = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ operation: 'getPositions' }),
+                    body: JSON.stringify({ operation: 'getPosition' }),
                 });
                 
                 const data = await response.json();
