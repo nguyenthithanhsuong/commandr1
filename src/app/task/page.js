@@ -95,12 +95,14 @@ export default function TaskPage() {
       // Assuming the view page URL structure is similar to personnel
       router.push(`/task/viewtask?id=${task.taskid}`);
     };
-    
-    // Helper function to format date strings
     const formatDate = (dateString) => {
-        // Ensure only the date part is shown if it's a full timestamp
-        return dateString ? dateString.substring(0, 10) : 'N/A';
-    };
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const options = { timeZone: "Asia/Bangkok" };
+  const parts = date.toLocaleDateString("en-US", options).split("/");
+  const [month, day, year] = parts;
+  return `${month}-${day}-${year}`;
+};
 
 
     if (isLoading) {

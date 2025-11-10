@@ -26,9 +26,6 @@ export default function UpdateTaskPage() { // Renamed component
                 enddate: '', // **NEW: Due Date field**
             });
         
-        const formatInputDate = (dateString) => {
-        return dateString ? new Date(dateString).toISOString().substring(0, 10) : '';
-    };
         //fetch assigner id
             useEffect(() => {
                     const checkAuth = async () => {

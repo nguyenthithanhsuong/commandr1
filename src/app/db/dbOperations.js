@@ -446,15 +446,13 @@ export async function retirePersonnel(id)
         const personnelUpdateQuery = `
             UPDATE personnel SET 
                 IsActive = ?,
-                TerminationDate = ?
+                TerminationDate = CURDATE()
             WHERE UserID = ?
         `;
         
-        const today = new Date().toISOString().slice(0, 10);
 
         const [personnelResult] = await db.execute(personnelUpdateQuery, [
-            0, // Convert boolean/value to 1 or 0
-            today, // Set termination date to today
+            0,
             id
         ]);
 

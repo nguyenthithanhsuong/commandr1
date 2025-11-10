@@ -13,11 +13,12 @@ const DetailRow = ({ label, value }) => (
 
 // Helper function to format date strings (copied from viewtask)
 const formatDate = (dateString) => {
-    return dateString ? new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    }) : 'N/A';
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const options = { timeZone: "Asia/Bangkok" };
+  const parts = date.toLocaleDateString("en-US", options).split("/");
+  const [month, day, year] = parts;
+  return `${month}-${day}-${year}`;
 };
 
 export default function ViewProjectPage() {

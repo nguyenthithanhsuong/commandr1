@@ -30,6 +30,14 @@ export default function PersonnelPage() {
             </span>
         );
     };
+    const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const options = { timeZone: "Asia/Bangkok" };
+  const parts = date.toLocaleDateString("en-US", options).split("/");
+  const [month, day, year] = parts;
+  return `${month}-${day}-${year}`;
+};
 
     // Centralized fetch function wrapped in useCallback
     const fetchPersonnel = useCallback(async (includeInactive) => {
@@ -219,12 +227,12 @@ export default function PersonnelPage() {
                                 
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.userid}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.dateofbirth.substring(0, 10)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(user.dateofbirth)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.gender}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.phonenumber}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.position}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.department}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.employdate.substring(0, 10)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(user.employdate)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.managername}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isactive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>

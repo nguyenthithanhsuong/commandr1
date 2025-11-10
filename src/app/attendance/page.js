@@ -10,6 +10,7 @@ export default function AttendancePage() {
   const [attendanceList, setAttendanceList] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [AssignerID, setAssignerID] = useState([]);
+  const [showTodayOnly, setShowTodayOnly] = useState(false); // 👈 NEW
 
   const NavLink = ({ name, href }) => {
     const isActive = router.pathname === href;
@@ -43,7 +44,6 @@ export default function AttendancePage() {
       } else {
         console.error("Failed to fetch attendance:", data.error);
       }
-      console.log(data.data);
     } catch (error) {
       console.error("Error fetching attendance:", error);
     }
@@ -76,41 +76,37 @@ export default function AttendancePage() {
   const checkIn = async (record) => {
     const confirmed = window.confirm(`Check in for ${record.Name}?`);
     if (!confirmed) return;
-    try{
-    await fetch("/db/dbroute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        operation: "checkIn",
-        params: { id: record.UserID, date: record.AttendanceDate },
-      }),
-    });
-    fetchAttendance();
-  }
-  catch (error)
-  {
-    alert(error);
-  }
+    try {
+      await fetch("/db/dbroute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operation: "checkIn",
+          params: { id: record.UserID, date: record.AttendanceDate },
+        }),
+      });
+      fetchAttendance();
+    } catch (error) {
+      alert(error);
+    }
   };
 
   const checkOut = async (record) => {
-    try{
-    const confirmed = window.confirm(`Check out for ${record.Name}?`);
-    if (!confirmed) return;
-    await fetch("/db/dbroute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        operation: "checkOut",
-        params: { id: record.UserID, date: record.AttendanceDate },
-      }),
-    });
-    fetchAttendance();
+    try {
+      const confirmed = window.confirm(`Check out for ${record.Name}?`);
+      if (!confirmed) return;
+      await fetch("/db/dbroute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operation: "checkOut",
+          params: { id: record.UserID, date: record.AttendanceDate },
+        }),
+      });
+      fetchAttendance();
+    } catch (error) {
+      alert(error);
     }
-  catch (error)
-  {
-    alert(error);
-  }
   };
 
   useEffect(() => {
@@ -118,8 +114,7 @@ export default function AttendancePage() {
       try {
         const response = await fetch("/api/auth/check", { credentials: "include" });
         if (!response.ok) {
-            
-    alert("boom");
+          alert("boom");
           router.replace("/signin");
           return;
         }
@@ -134,18 +129,57 @@ export default function AttendancePage() {
     fetchAttendance();
   }, [router]);
 
+  // 🧠 Filtering Logic
   const filteredAttendance = useMemo(() => {
-    if (!searchTerm) return attendanceList;
+  let list = attendanceList;
+
+  if (showTodayOnly) {
+    // Get current date in Asia/Bangkok time
+    const now = new Date();
+    const bangkokDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+
+    // Format as MM-DD-YYYY
+    const month = String(bangkokDate.getMonth() + 1).padStart(2, "0");
+    const day = String(bangkokDate.getDate()).padStart(2, "0");
+    const year = bangkokDate.getFullYear();
+    const todayFormatted = `${month}-${day}-${year}`;
+
+    // Filter by today's Bangkok date
+    list = list.filter((a) => {
+      const recordDate = new Date(a.AttendanceDate);
+      const recordBangkokDate = new Date(recordDate.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      const rMonth = String(recordBangkokDate.getMonth() + 1).padStart(2, "0");
+      const rDay = String(recordBangkokDate.getDate()).padStart(2, "0");
+      const rYear = recordBangkokDate.getFullYear();
+      const recordFormatted = `${rMonth}-${rDay}-${rYear}`;
+      return recordFormatted === todayFormatted;
+    });
+  }
+
+  if (searchTerm) {
     const lower = searchTerm.toLowerCase();
-    return attendanceList.filter(
+    list = list.filter(
       (a) =>
-        a.Name.toString().includes(lower) ||
+        a.Name.toLowerCase().includes(lower) ||
         a.CheckInStatus?.toLowerCase().includes(lower) ||
         a.CheckOutStatus?.toLowerCase().includes(lower)
     );
-  }, [attendanceList, searchTerm]);
+  }
 
-  const formatDate = (date) => (date ? new Date(date).toLocaleString() : "N/A");
+  return list;
+}, [attendanceList, searchTerm, showTodayOnly]);
+
+  // 🕓 Format Display
+  const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const options = { timeZone: "Asia/Bangkok" };
+  const parts = date.toLocaleDateString("en-US", options).split("/");
+  const [month, day, year] = parts;
+  return `${month}-${day}-${year}`;
+};
+
+
 
   if (isLoading) return <div className="p-4">Loading Attendance...</div>;
 
@@ -174,21 +208,35 @@ export default function AttendancePage() {
         />
       </header>
 
-      {/* Search and Generate Button */}
-      <div className="flex justify-between items-center my-4">
+      {/* Search + Filter + Generate Buttons */}
+      <div className="flex flex-wrap justify-between items-center my-4 gap-2">
         <input
           type="search"
           placeholder="Search by Name or Status..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-lg p-2 px-4 text-base text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+          className="w-full sm:max-w-lg p-2 px-4 text-base text-gray-900 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
         />
-        <Button
-          text="Generate Attendance"
-          style="Filled"
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow-md"
-          onClick={generateAttendance}
-        />
+
+        <div className="flex gap-2">
+          <Button
+            text={showTodayOnly ? "Show All" : "Show Today"} // 👈 NEW TOGGLE
+            style="Filled"
+            className={`${
+              showTodayOnly
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-600 hover:bg-gray-700"
+            } text-white px-4 py-2 rounded-md shadow-md`}
+            onClick={() => setShowTodayOnly((prev) => !prev)}
+          />
+
+          <Button
+            text="Generate Attendance"
+            style="Filled"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow-md"
+            onClick={generateAttendance}
+          />
+        </div>
       </div>
 
       {/* Attendance Table */}
@@ -206,39 +254,42 @@ export default function AttendancePage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-  {filteredAttendance.map((record) => (
-    <tr key={`${record.UserID}-${record.AttendanceDate}`} className="hover:bg-blue-50">
-      <td className="px-6 py-4 text-sm text-gray-700">{record.AttendanceDate.slice(0,10)}</td>
-      <td className="px-6 py-4 text-sm text-gray-700">{record.Name}</td>
-      <td className="px-6 py-4 text-sm text-gray-700">{record.CheckInStatus}</td>
-      <td className="px-6 py-4 text-sm text-gray-700">{formatDate(record.CheckInDateTime)}</td>
-      <td className="px-6 py-4 text-sm text-gray-700">{record.CheckOutStatus}</td>
-      <td className="px-6 py-4 text-sm text-gray-700">{formatDate(record.CheckOutDateTime)}</td>
+            {filteredAttendance.map((record) => (
+              <tr
+                key={`${record.UserID}-${record.AttendanceDate}`}
+                className="hover:bg-blue-50"
+              >
+                <td className="px-6 py-4 text-sm text-gray-700">
+                  {formatDate(record.AttendanceDate).slice(0, 10)}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-700">{record.Name}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{record.CheckInStatus}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{formatDate(record.CheckInDateTime)}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{record.CheckOutStatus}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{formatDate(record.CheckOutDateTime)}</td>
 
-      <td className="px-6 py-4 text-center text-sm">
-        {/* ✅ Conditional Buttons */}
-        {record.CheckInStatus !== "checked_in" ? (
-          <button
-            onClick={() => checkIn(record)}
-            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-xs font-semibold"
-          >
-            Check In
-          </button>
-        ) : record.CheckOutStatus !== "checked_out" ? (
-          <button
-            onClick={() => checkOut(record)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs font-semibold"
-          >
-            Check Out
-          </button>
-        ) : (
-          <span className="text-gray-500 text-xs font-semibold">✅ Completed</span>
-        )}
-      </td>
-    </tr>
-  ))}
-</tbody>
-
+                <td className="px-6 py-4 text-center text-sm">
+                  {record.CheckInStatus !== "checked_in" ? (
+                    <button
+                      onClick={() => checkIn(record)}
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-xs font-semibold"
+                    >
+                      Check In
+                    </button>
+                  ) : record.CheckOutStatus !== "checked_out" ? (
+                    <button
+                      onClick={() => checkOut(record)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs font-semibold"
+                    >
+                      Check Out
+                    </button>
+                  ) : (
+                    <span className="text-gray-500 text-xs font-semibold">✅ Completed</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
 

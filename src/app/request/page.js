@@ -81,7 +81,14 @@ export default function RequestPage() {
 
   const handleRowClick = (Request) => {};
 
-  const formatDate = (dateString) => (dateString ? dateString.substring(0, 10) : "N/A");
+  const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  const options = { timeZone: "Asia/Bangkok" };
+  const parts = date.toLocaleDateString("en-US", options).split("/");
+  const [month, day, year] = parts;
+  return `${month}-${day}-${year}`;
+};
 
   // ✅ Approve / Decline handlers
   const handleAccept = async (req) => {
