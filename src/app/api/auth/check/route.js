@@ -16,7 +16,6 @@ function parseCookies(cookieHeader) {
 }
 
 export async function GET(request) {
-    // Read cookies from the incoming request's headers (more reliable in Route Handlers)
     const cookieHeader = request.headers.get('cookie');
     const cookies = parseCookies(cookieHeader);
     const tokenValue = cookies['auth_token'];

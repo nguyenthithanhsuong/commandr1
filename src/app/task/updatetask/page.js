@@ -156,7 +156,6 @@ export default function UpdateTaskPage() { // Renamed component
             setIsSubmitting(false);
             return;
         }
-        //alert(taskId + ' ' +formData.taskname + ' '+ formData.taskstatus + ' ' + formData.personnelid + ' ' + formData.projectid + ' ' + formData.description + ' ' + formData.eddate);
         try {
             const response = await fetch('/db/dbroute', {
                 method: 'POST',

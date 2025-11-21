@@ -12,10 +12,65 @@ export async function authenticateUser(email, password) {
             query,
             [email, password]
         );
-        return { success: true, data: rows};
+        return { success: true, data: rows[0]};
     } catch (error) {
         console.error("Authentication error:", error);
         return { success: false, error: "Authentication failed" };
+    }
+}
+
+export async function authorization(id)
+{
+    try
+    {
+        const query = `
+        Select
+            P.UserID AS userid,
+            A.AccessID AS accessid,
+            A.Is_Personnel AS ispersonnel,
+            A.Is_Admin AS isadmin,
+            A.Personnel_Permission AS personnelpermission,
+            A.Work_Permission AS workpermission,
+            A.Attendance_Permission AS attendancepermission,
+            A.Report_Permission AS reportpermission
+
+            FROM
+
+            Personnel AS P
+            JOIN Position AS POS ON P.PositionId = Pos.PositionID
+            JOIN Authorization AS A ON Pos.AccessID = A.AccessID
+
+            WHERE P.UserID = ?`
+        const [rows] = await db.execute
+            (
+                query,
+                [id],
+            );
+            console.log('Authorization check for ' + [id] + 'successful!');
+            return {success: true, data: rows[0]};
+    }
+    catch (error)
+    {
+        console.error("Authorization check failed!");
+        return  { success: false, error: "Authorization check failed"};
+    }
+}
+// Get AccessID
+export async function getAccess(id)
+{
+    try
+    {
+        const query = `select
+                    AccessID
+                    From personnel
+                    join position on personnel.positionid = position.positionid
+                    where userid = ?`
+        const [rows] = await db.execute(query, [id]);
+        return {success:true, accessid: rows[0].AccessID}
+    }
+    catch (error)
+    {
+        return { success: false, error: "Access check failed"};
     }
 }
 // Get Position
@@ -266,45 +321,68 @@ export async function getAllPersonnelActive() {
 }
 // Load One Personnel
 export async function getPersonnelById(id) {
-    try {
-        const query = `
-            SELECT
-                P.UserID AS userid,
-                P.Name AS name,
-                Pos.PositionName AS position,
-                P.Dateofbirth AS dateofbirth,
-                P.Gender AS gender,
-                P.EmployDate AS employdate,
-                P.PhoneNumber AS phonenumber,
-                P.ManagerID AS managerid,
-                D.DepartmentName AS department,
-                P.IsActive AS isactive,
-                P.TerminationDate AS terminationdate,
-                M.Name AS managername,
-                account.Email AS email
-            FROM
-                personnel AS P 
-            LEFT JOIN
-                personnel AS M ON P.ManagerID = M.UserID
-            JOIN
-                position AS Pos ON P.PositionID = Pos.PositionID
-            JOIN
-                department AS D ON Pos.DepartmentID = D.DepartmentID
-            JOIN
-                account ON P.UserID = account.UserID
-            WHERE
-                P.UserID = ?
-        `;
-        const [rows] = await db.execute(query, [id]);
-        if (rows.length === 0) {
-            return { success: false, error: "Personnel not found" };
-        }
-        return { success: true, data: rows[0] };
-    } catch (error) {
-        console.error("Get personnel by ID error:", error);
-        return { success: false, error: "Failed to fetch personnel" };
+  try {
+    const query = `
+      SELECT
+          P.UserID AS userid,
+          P.Name AS name,
+          Pos.PositionName AS position,
+          P.DateOfBirth AS dateofbirth,
+          P.Gender AS gender,
+          P.EmployDate AS employdate,
+          P.PhoneNumber AS phonenumber,
+          P.ManagerID AS managerid,
+          D.DepartmentName AS department,
+          P.IsActive AS isactive,
+          P.TerminationDate AS terminationdate,
+          M.Name AS managername,
+          account.Email AS email,
+          Pos.BaseSalary AS basesalary,
+          
+          -- Attendance percentage (count of days checked_in / total days)
+          ROUND(
+            (SUM(CASE WHEN A.CheckInStatus = 'checked_in' THEN 1 ELSE 0 END) / COUNT(A.AttendanceDate)) * 100,
+            2
+          ) AS attendanceRate,
+
+          -- Salary = Base Salary * (attendanceRate / 100)
+          ROUND(
+            Pos.BaseSalary * (
+              (SUM(CASE WHEN A.CheckInStatus = 'checked_in' THEN 1 ELSE 0 END) / COUNT(A.AttendanceDate))
+            ),
+            2
+          ) AS salary
+
+      FROM personnel AS P
+      LEFT JOIN personnel AS M ON P.ManagerID = M.UserID
+      JOIN position AS Pos ON P.PositionID = Pos.PositionID
+      JOIN department AS D ON Pos.DepartmentID = D.DepartmentID
+      JOIN account ON P.UserID = account.UserID
+      LEFT JOIN attendance AS A ON P.UserID = A.UserID
+
+      WHERE
+      P.UserID = ?
+      GROUP BY P.UserID
+    `;
+
+    const [rows] = await db.execute(query, [id]);
+
+    if (rows.length === 0) {
+      return { success: false, error: "Personnel not found" };
     }
+
+    // Fill in safe defaults for nulls
+    const data = rows[0];
+    data.attendancerate = data.attendancerate || 0;
+    data.salary = data.salary || 0;
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Get personnel by ID error:", error);
+    return { success: false, error: "Failed to fetch personnel" };
+  }
 }
+
 // Add Personnel
 export async function addPersonnel(id, data) {
     try
@@ -332,13 +410,12 @@ export async function addPersonnel(id, data) {
         const newPersonnelId = result.insertId; 
 
         const query2 = `
-        Insert into Account (UserID, AccessID, Email, Password, HRID)
-        VALUES (?, ?, ?, ?, ?)
+        Insert into Account (UserID, Email, Password, HRID)
+        VALUES (?, ?, ?, ?)
         `;
         
         await db.execute(query2, [
             newPersonnelId, // UserID = New Personnel ID
-            '1', // AccessID - Assuming '1' is the correct default access level
             data.email,
             data.password,
             managerId, // HRID = Manager ID
@@ -563,6 +640,38 @@ export async function getTaskByProjectId(id) {
     }
 } 
 
+export async function getTaskByUserID(id) {
+    try {
+        const query = `
+            SELECT
+                T.TaskID AS taskid,
+                T.TaskName AS taskname,
+                T.TaskStatus AS taskstatus,
+                A.Name AS assignername,
+                P.Name AS personnelname,
+                T.CreationDate AS creationdate,
+                T.Enddate as enddate,
+                Pro.ProjectName AS projectname,
+                T.Description AS description
+            FROM
+                Task as T
+            LEFT JOIN
+                personnel AS A ON T.AssignerID = A.UserID
+            LEFT JOIN
+                personnel AS P ON T.PersonnelID = P.UserID
+            LEFT JOIN
+                project as Pro on T.ProjectID = Pro.ProjectID
+            WHERE
+                T.PersonnelID = ?
+        `;
+        const [rows] = await db.execute(query, [id]);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get task by ID error:", error);
+        return { success: false, error: "Failed to fetch task" };
+    }
+} 
+
 // Add Task
 export async function addTask(id, data) {
     try {
@@ -607,6 +716,24 @@ export async function updateTask(id, data) {
             data.projectid,
             data.description,
             data.enddate,
+            id
+        ]);
+        return { success: true, rowsAffected: taskResult.affectedRows };
+    } catch (error) {
+        console.error("Update task error:", error);
+        return { success: false, error: "Failed to update task" };
+    }
+}   
+//Update Task Status:
+export async function updateTaskStatus(id, data) {
+    try {
+        const taskUpdateQuery = `
+            UPDATE Task SET
+                TaskStatus = ?
+            WHERE TaskID = ?
+            `
+        const [taskResult] = await db.execute(taskUpdateQuery, [
+            data.taskstatus,
             id
         ]);
         return { success: true, rowsAffected: taskResult.affectedRows };
@@ -784,6 +911,36 @@ export async function getAllRequest() {
     }
 }
 
+export async function getRequest(id) {
+    try {
+        const query = `
+            SELECT
+                R.RequestID AS requestid,
+                R.RequesterID AS requesterid,
+                Req.Name AS requestername,
+                R.ApproverID AS approverid,
+                App.Name AS approvername,
+                R.RequestType AS type,
+                R.Description AS description,
+                R.Status AS requeststatus,
+                R.CreatedAt AS creationdate
+            FROM
+                Request as R
+            LEFT JOIN
+                personnel AS Req ON R.RequesterID = Req.UserID
+            LEFT JOIN
+                personnel AS App ON R.ApproverID = App.UserID
+            WHERE
+                R.RequesterID = ?
+        `;
+        const [rows] = await db.execute(query, [id]);
+        return { success: true, data: rows };
+    } catch (error) {
+        console.error("Get request error:", error);
+        return { success: false, error: "Failed to fetch request" };
+    }
+}
+
 export async function updateRequestStatus(id, data, status) {
     try {
         const projectUpdateQuery = `
@@ -843,7 +1000,7 @@ export async function addRequest(data) {
 
 export async function getAttendance() {
   try {
-    let query = `
+    const query = `
   SELECT 
     a.UserID AS UserID,
     p.Name AS Name,
@@ -853,11 +1010,56 @@ export async function getAttendance() {
     a.CheckOutStatus,
     a.CheckOutDateTime
   FROM Attendance a
-  JOIN Personnel p ON a.UserID = p.UserID;
+  JOIN Personnel p ON a.UserID = p.UserID
 `;
 
     const [rows] = await db.execute(query);
     return { success: true, data: rows };
+  } catch (error) {
+    console.error("Failed to fetch Attendance: ", error);
+    return { success: false, error: "Failed to fetch Attendance" };
+  }
+}
+
+export async function getAttendanceByID(id, type) {
+  try {
+    if(type=='All')
+    {
+        const query = `
+    SELECT 
+        a.UserID AS UserID,
+        p.Name AS Name,
+        a.AttendanceDate,
+        a.CheckInStatus,
+        a.CheckInDateTime,
+        a.CheckOutStatus,
+        a.CheckOutDateTime
+    FROM Attendance a
+    JOIN Personnel p ON a.UserID = p.UserID
+    WHERE p.UserID = ?
+    `;
+
+        const [rows] = await db.execute(query, [id]);
+        return { success: true, data: rows };
+    }
+    else{
+        const query = `
+    SELECT 
+        a.UserID AS UserID,
+        p.Name AS Name,
+        a.AttendanceDate,
+        a.CheckInStatus,
+        a.CheckInDateTime,
+        a.CheckOutStatus,
+        a.CheckOutDateTime
+    FROM Attendance a
+    JOIN Personnel p ON a.UserID = p.UserID
+    WHERE p.UserID = ? AND AttendanceDate = CURDATE()
+    `;
+
+        const [rows] = await db.execute(query, [id]);
+        return { success: true, data: rows[0] };
+    }
   } catch (error) {
     console.error("Failed to fetch Attendance: ", error);
     return { success: false, error: "Failed to fetch Attendance" };
@@ -935,3 +1137,150 @@ export async function checkOut(id, date) {
     return { success: false, error: "Failed to check out" };
   }
 }
+
+export async function clearAttendance()
+{
+    try
+    {
+        const [result] = await db.execute(`Delete From Attendance`)
+        return { success: true, data: result };
+    }
+    catch (error)
+    {
+        return {success: false, error: "Failed to clear Attendance"}
+    }
+}
+
+export async function getReport() {
+  try {
+    // 🧩 Query all necessary datasets
+    const [personnel] = await db.execute(`
+      SELECT 
+        UserID,
+        Name,
+        Gender,
+        EmployDate,
+        TerminationDate,
+        IsActive,
+        positionid
+      FROM personnel;
+    `);
+
+    const [projects] = await db.execute(`
+      SELECT 
+        ProjectID,
+        ProjectName,
+        ProjectStatus,
+        AssignerID,
+        CreationDate,
+        enddate
+      FROM project;
+    `);
+
+    const [tasks] = await db.execute(`
+      SELECT 
+        TaskID,
+        TaskName,
+        TaskStatus,
+        AssignerID,
+        PersonnelID,
+        ProjectID,
+        CreationDate,
+        enddate
+      FROM task;
+    `);
+
+    const [attendance] = await db.execute(`
+      SELECT 
+        a.UserID,
+        p.Name,
+        a.AttendanceDate,
+        a.CheckInStatus,
+        a.CheckOutStatus
+      FROM attendance a
+      JOIN personnel p ON a.UserID = p.UserID;
+    `);
+
+    // ✅ Return combined data for the frontend report page
+    return {
+      success: true,
+      data: {
+        personnel,
+        projects,
+        tasks,
+        attendance,
+      },
+    };
+  } catch (error) {
+    console.error("❌ Error in getReport():", error);
+    return {
+      success: false,
+      error: "Failed to generate report data.",
+    };
+  }
+}
+
+
+export async function getNotification(id) {
+  try {
+    const query = `
+  SELECT 
+N.NotiID AS notiid,
+N.NotiType AS notiype,
+N.NotifierID AS notifierid,
+P.NAME AS notifiername,
+N.NotifiedID AS notifiedID,
+Q.NAME AS notifiedname,
+N.SeenStatus AS seen,
+N.CreatedAt AS creationdate
+From NOTIFICATION As N
+JOIN PERSONNEL AS P ON N.NotifierID = P.UserID 
+JOIN PERSONNEL AS Q ON N.NotifiedID = Q.UserID
+WHERE N.NotiID = ?;
+`;
+
+    const [rows] = await db.execute(query, [id]);
+    return { success: true, data: rows };
+  } catch (error) {
+    console.error("Failed to fetch Notification for "+ [id], error);
+    return { success: false, error: "Failed to fetch Notification" };
+  }
+}
+
+export async function readNotification(id){
+  try {
+    const query = `
+    UPDATE Notification
+    SET SeenStatus = TRUE
+    WHERE NotiID = ?;
+`;
+
+    const [rows] = await db.execute(query, [id]);
+    return { success: true, data: rows };
+  } catch (error) {
+    console.error("Failed to read Notification for "+ [id], error);
+    return { success: false, error: "Failed to read Notification" };
+  }
+}
+
+export async function sendNotification(data){
+  try {
+    const query = `
+    INSERT INTO Notification (NotiType, NotifierID, NotifiedID, SeenStatus, CreatedAt)
+    VALUES (?, ?, ?, FALSE, NOW());
+`;
+
+    const [rows] = await db.execute(query,
+        [
+            data.notitype,
+            data.notifierid,
+            data.notifiedid
+        ]
+    );
+    return { success: true, data: rows };
+  } catch (error) {
+    console.error("Failed to send Notification", error);
+    return { success: false, error: "Failed to send Notification" };
+  }
+}
+

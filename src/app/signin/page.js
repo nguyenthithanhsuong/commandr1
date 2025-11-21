@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Button from "../components/button/button";
 
@@ -13,6 +13,23 @@ export default function SignInPage() {
     const [password, setPassword] = useState(""); 
     const [error, setError] = useState("");
     let ID = 0;
+    const generateAttendance = async () => {
+    try {
+      const response = await fetch("/db/dbroute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operation: "createAttendance", params: {} }),
+      });
+      const data = await response.json();
+      console.log("Attendance auto-generated:", data);
+    } catch (error) {
+      console.error("Error generating attendance:", error);
+    }
+  };
+
+  useEffect(() => {
+    generateAttendance();   // 👈 runs when page loads
+  }, []);
     //button click handle
     const handleSubmit = async (e) => {
         console.log("Submitting sign-in form with:", { email, password });
@@ -45,9 +62,42 @@ export default function SignInPage() {
                 return;
             }
             
-            ID = result.userid;
+            console.log('ID: ' + result.data.UserID);
+
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    operation: 'authorization',
+                    params: {
+                        id: result.data.UserID
+                    }
+                }),
+            });
+
+            const result2 = await authorizationResponse.json();
+
+            console.log('data: '+ result2.data.ispersonnel);
+
+            if (!authorizationResponse.ok) {
+                throw new Error(result2.error || 'Divergence failed');
+            }
             
-            router.push('/personnel');
+            if(result2.data.ispersonnel=='1')
+            {
+                router.push('/personal');
+            }
+            else if (result2.data.ispersonnel=='0')
+            {
+                router.push('/personnel');
+            }
+            else
+            {
+                alert("Authorization Failed!");
+            }
             
         } catch (error) {
             console.error("Sign-in error:", error);

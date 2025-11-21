@@ -10,7 +10,7 @@ export default function AttendancePage() {
   const [attendanceList, setAttendanceList] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [AssignerID, setAssignerID] = useState([]);
-  const [showTodayOnly, setShowTodayOnly] = useState(false); // 👈 NEW
+  const [showTodayOnly, setShowTodayOnly] = useState(true); // 👈 NEW
 
   const NavLink = ({ name, href }) => {
     const isActive = router.pathname === href;
@@ -29,6 +29,25 @@ export default function AttendancePage() {
       </span>
     );
   };
+
+  const formatDateTime = (dateString) => {
+  if (!dateString) return "N/A";
+
+  const date = new Date(dateString);
+  const bangkokDate = new Date(
+    date.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+  );
+
+  const month = String(bangkokDate.getMonth() + 1).padStart(2, "0");
+  const day = String(bangkokDate.getDate()).padStart(2, "0");
+  const year = bangkokDate.getFullYear();
+
+  const hours = String(bangkokDate.getHours()).padStart(2, "0");
+  const minutes = String(bangkokDate.getMinutes()).padStart(2, "0");
+  const seconds = String(bangkokDate.getSeconds()).padStart(2, "0");
+
+  return `${month}-${day}-${year} ${hours}:${minutes}:${seconds}`;
+};
 
   const fetchAttendance = async () => {
     try {
@@ -73,11 +92,34 @@ export default function AttendancePage() {
     }
   };
 
+  const clearAttendance = async () => {
+    const confirmed = window.confirm("Are you sure you want to clear all attendance?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch("/db/dbroute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operation: "clearAttendance", params: {} }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("Attendance cleared successfully!");
+        fetchAttendance();
+      } else {
+        alert("Failed to clear attendance.");
+      }
+    } catch (error) {
+      console.error("Error clearing attendance:", error);
+      alert("Error clearing attendance.");
+    }
+  };
+
   const checkIn = async (record) => {
     const confirmed = window.confirm(`Check in for ${record.Name}?`);
     if (!confirmed) return;
     try {
-      await fetch("/db/dbroute", {
+      const response = await fetch("/db/dbroute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -85,9 +127,17 @@ export default function AttendancePage() {
           params: { id: record.UserID, date: record.AttendanceDate },
         }),
       });
-      fetchAttendance();
+      const data = await response.json()
+      if (response.ok && data.success)
+      {
+        alert("Checked in successfully!");
+        fetchAttendance();
+      }
+      else{
+        alert("Failed to check in!");
+      }
     } catch (error) {
-      alert(error);
+      console.error("Error checking in:", error);
     }
   };
 
@@ -95,7 +145,7 @@ export default function AttendancePage() {
     try {
       const confirmed = window.confirm(`Check out for ${record.Name}?`);
       if (!confirmed) return;
-      await fetch("/db/dbroute", {
+      const response = await fetch("/db/dbroute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -103,9 +153,17 @@ export default function AttendancePage() {
           params: { id: record.UserID, date: record.AttendanceDate },
         }),
       });
+      const data = await response.json()
+      if (response.ok && data.success)
+      {
+        alert("Checked in successfully!");
+        fetchAttendance();
+      }
+      else{
+        alert("Failed to check in!");
+      }
       fetchAttendance();
     } catch (error) {
-      alert(error);
     }
   };
 
@@ -114,7 +172,6 @@ export default function AttendancePage() {
       try {
         const response = await fetch("/api/auth/check", { credentials: "include" });
         if (!response.ok) {
-          alert("boom");
           router.replace("/signin");
           return;
         }
@@ -236,6 +293,14 @@ export default function AttendancePage() {
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow-md"
             onClick={generateAttendance}
           />
+
+          <Button
+            text="Clear Attendance"
+            style="Filled"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow-md"
+            onClick={clearAttendance}
+          />
+
         </div>
       </div>
 
@@ -264,9 +329,9 @@ export default function AttendancePage() {
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-700">{record.Name}</td>
                 <td className="px-6 py-4 text-sm text-gray-700">{record.CheckInStatus}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{formatDate(record.CheckInDateTime)}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{formatDateTime(record.CheckInDateTime)}</td>
                 <td className="px-6 py-4 text-sm text-gray-700">{record.CheckOutStatus}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{formatDate(record.CheckOutDateTime)}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{formatDateTime(record.CheckOutDateTime)}</td>
 
                 <td className="px-6 py-4 text-center text-sm">
                   {record.CheckInStatus !== "checked_in" ? (

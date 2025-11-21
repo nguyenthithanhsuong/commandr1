@@ -121,14 +121,15 @@ export default function DepartmentPage() {
                 }
                 const data = await response.json();
                 setAssignerID(data.user);
-                fetchDepartment();
-                fetchDepartmentList();
             } catch (error) {
                 console.error('Auth check failed:', error);
                 router.replace('/signin');
             }
         };
         checkAuth();
+        
+                fetchDepartment();
+                fetchDepartmentList();
     }, [router, fetchDepartment, fetchDepartmentList]); 
 
     // Group and Filter Logic 

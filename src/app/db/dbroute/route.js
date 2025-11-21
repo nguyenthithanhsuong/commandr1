@@ -11,6 +11,9 @@ export async function POST(request) {
             case 'authenticate':
                 result = await dbOps.authenticateUser(params.email, params.password);
                 break;
+            case 'authorization':
+                result = await dbOps.authorization(params.id);
+                break;
             //personnel
             case 'getAllPersonnel':
                 result = await dbOps.getAllPersonnel();
@@ -51,6 +54,7 @@ export async function POST(request) {
                 break;
             case 'addDepartment':
                 result = await dbOps.addDepartment(params.data);
+                
                 break;
             case 'updateDepartment':
                 result = await dbOps.updateDepartment(params.id, params.data);
@@ -68,11 +72,17 @@ export async function POST(request) {
             case 'getTaskByProjectId':
                 result = await dbOps.getTaskByProjectId(params.id);
                 break; 
+            case 'getTaskByPersonnelId':
+                result = await dbOps.getTaskByUserID(params.id);
+                break;
             case 'createTask':
                 result = await dbOps.addTask(params.id, params.data);
                 break;
             case 'updateTask':
                 result = await dbOps.updateTask(params.id, params.data);
+                break;
+            case 'updateTaskStatus':
+                result = await dbOps.updateTaskStatus(params.id, params.data);
                 break;
             case 'deleteTask':
                 result = await dbOps.deleteTask(params.id);
@@ -97,6 +107,9 @@ export async function POST(request) {
             case 'getAllRequest':
                 result = await dbOps.getAllRequest();
                 break;
+            case 'getRequest':
+                result = await dbOps.getRequest(params.id);
+                break;
             case 'createRequest':
                 result = await dbOps.addRequest(params.data);
                 break;
@@ -110,6 +123,10 @@ export async function POST(request) {
             case 'getAttendance':
                 result  = await dbOps.getAttendance();
                 break;
+            //personal attendance
+            case 'getAttendanceByID':
+                result = await dbOps.getAttendanceByID(params.id, params.type);
+                break;
             case 'createAttendance':
                 result = await dbOps.createAttendance();
                 break;
@@ -118,6 +135,23 @@ export async function POST(request) {
                 break;
             case 'checkOut':
                 result = await dbOps.checkOut(params.id, params.date);
+                break;
+            case 'clearAttendance':
+                result = await dbOps.clearAttendance();
+                break;
+            //report
+            case 'getReportData':
+                result = await dbOps.getReport();
+                break;
+            //notification
+            case 'getNotification':
+                result = await dbOps.getNotification(params.id);
+                break;
+            case 'readNotification':
+                result = await dbOps.readNotification(params.id);
+                break;
+            case 'sendNotification':
+                result = await dbOps.sendNotification(params.data);
                 break;
             default:
                 return NextResponse.json(
@@ -136,7 +170,7 @@ export async function POST(request) {
         // If this was an authentication request and succeeded, set the session cookie here
         if (operation === 'authenticate') {
             // result.data is expected to be an array of matching users
-            const user = Array.isArray(result.data) && result.data[0];
+            const user = result.data;
             if (user) {
                 const token = Buffer.from(JSON.stringify({
                     id: user.UserID,

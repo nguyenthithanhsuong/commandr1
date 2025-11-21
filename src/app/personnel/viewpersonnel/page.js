@@ -236,6 +236,9 @@ export default function ViewPersonnelPage() {
                                 value={formatDate(user.terminationdate)} 
                             />
                         )}
+                        <DetailRow label="Attendance" value={user.attendanceRate} />
+                        <DetailRow label="Base Salary" value={user.basesalary} />
+                        <DetailRow label="Salary" value={user.salary} />
                     </div>
                 </div>
 
