@@ -32,6 +32,69 @@ export default function ViewProjectPage() {
     const [project, setProject] = useState(null);
     const [tasks, setTasks] = useState([]);
 
+//auth bundle
+            const [AssignerID, setAssignerID] = useState([]);
+            useEffect(() => {
+                    const checkAuth = async () => {
+                        try {
+                            const response = await fetch('../api/auth/check', { credentials: 'include' });
+                            if (!response.ok) {
+                                router.replace('/signin');
+                                return;
+                            }
+                            const data = await response.json();
+                            setAssignerID(data.user);
+                        } catch (error) {
+                            console.error('Auth check failed:', error);
+                            router.replace('/signin');
+                        }
+                    };
+                    checkAuth();
+                }, [router]);
+            
+            //authorization bundle
+            const [authorization, setAuthorization] = useState('');
+        
+            //fetch perms
+            useEffect(() => {
+                if (!AssignerID) return;
+        
+                const fetchAuthorization = async () => {
+                const authorizationResponse = await fetch('/db/dbroute', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                    operation: 'authorization',
+                    params: { id: AssignerID }
+              })
+            });
+        
+            const result = await authorizationResponse.json();
+            setAuthorization(result.data);
+          };
+          fetchAuthorization();
+          }, [AssignerID]);
+        
+          //reroute for personnels
+          useEffect(() => {
+            if (!authorization) return;  // Wait until authorization is set
+        
+            if (authorization.ispersonnel == 1) {
+                router.replace('/personal');
+            }
+        }, [authorization, router]);
+        
+          //reroute for specific perms
+          useEffect(() => {
+            if (!authorization) return;  // Wait until authorization is set
+        
+            if (authorization.workpermission == 0) {
+                router.replace('/project');
+            }
+            setIsLoading(false);
+        }, [authorization, router]);
+
     // --- Data Fetching Effect ---
     useEffect(() => {
         if (!projectid) {
@@ -178,7 +241,7 @@ export default function ViewProjectPage() {
                         <p className="text-xl text-gray-600 mt-1">Viewing: <span className="font-semibold">{project.projectname}</span></p>
                     </div>
                     
-                    <div className="flex space-x-3">
+                    {authorization.workpermission == 1 && (<div className="flex space-x-3">
                         {/* Update Button (Replaced component with native button) */}
                         <Button
                                                     text="Update Project"
@@ -194,7 +257,7 @@ export default function ViewProjectPage() {
                                                     className="bg-red-600 text-white hover:bg-red-700 transition duration-200 ease-in-out px-4 py-2 font-medium rounded-lg shadow-md"
                                                     onClick={handleDelete}
                         />
-                    </div>
+                    </div>)}
                 </div>
 
                 {/* Details Card (White Background) */}

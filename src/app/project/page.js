@@ -28,22 +28,64 @@ export default function ProjectPage() {
         );
     };
 
+//auth bundle
+        const [AssignerID, setAssignerID] = useState([]);
+        useEffect(() => {
+                const checkAuth = async () => {
+                    try {
+                        const response = await fetch('../api/auth/check', { credentials: 'include' });
+                        if (!response.ok) {
+                            router.replace('/signin');
+                            return;
+                        }
+                        const data = await response.json();
+                        setAssignerID(data.user);
+                    } catch (error) {
+                        console.error('Auth check failed:', error);
+                        router.replace('/signin');
+                    }
+                };
+                checkAuth();
+            }, [router]);
+        
+        //authorization bundle
+        const [authorization, setAuthorization] = useState('');
+    
+        //fetch perms
+        useEffect(() => {
+            if (!AssignerID) return;
+    
+            const fetchAuthorization = async () => {
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                operation: 'authorization',
+                params: { id: AssignerID }
+          })
+        });
+    
+        const result = await authorizationResponse.json();
+        setAuthorization(result.data);
+      };
+      fetchAuthorization();
+      }, [AssignerID]);
+    
+      //reroute for personnels
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.ispersonnel == 1) {
+            router.replace('/personal');
+        }
+    }, [authorization, router]);
+
     useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const response = await fetch('/api/auth/check', { credentials: 'include' });
-                if (!response.ok) {
-                    router.replace('/signin');
-                    return;
-                }
-            } catch (error) {
-                console.error('Auth check failed:', error);
-                router.replace('/signin');
-            }
-        };
 
         // Modified fetch function to call getAllProject
         const fetchProjects = async () => {
+            setIsLoading(true);
             try {
                 const response = await fetch('/db/dbroute', {
                     method: 'POST',
@@ -70,7 +112,6 @@ export default function ProjectPage() {
             setIsLoading(false);
         }
 
-        checkAuth();
         fetchProjects();
     }, [router]);
 
@@ -137,7 +178,7 @@ export default function ProjectPage() {
             </header>
             
             {/* Search Bar */}
-            <div className="flex justify-center mt-4 mb-4">
+            <div className="flex flex-wrap justify-between items-center my-4 gap-2">
                 <input
                     type="search"
                     placeholder="Search by Project Name, Status, or Assigner..."
@@ -150,7 +191,7 @@ export default function ProjectPage() {
             {/* Action buttons section */}
             <div className="flex justify-between items-center my-4">
                 <h1 className="text-2xl font-bold">Project List 📁</h1>
-                <Button
+                {authorization.workpermission == '1' && (<Button
                     text="Add New Project"
                     style="Filled" 
                     className="text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 p-2 text-sm rounded-md shadow-md transition duration-150" 
@@ -158,10 +199,8 @@ export default function ProjectPage() {
                         // Assuming project creation page is at /project/addproject
                         router.push('/project/addproject'); 
                     }}
-                />
+                />)}
             </div>
-
-            ---
 
             {/* Table Container */}
             <div className="overflow-x-auto shadow-lg rounded-lg border border-gray-200">

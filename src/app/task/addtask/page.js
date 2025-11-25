@@ -11,8 +11,6 @@ export default function AddTaskPage() {
     const [personnelList, setPersonnelList] = useState([]);
     const [projectList, setProjectList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    
-    const [AssignerID, setAssignerID] = useState([]);
 
     const [formData, setFormData] = useState({
         taskname: '',
@@ -26,23 +24,67 @@ export default function AddTaskPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
     
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const response = await fetch('../api/auth/check', { credentials: 'include' });
-                if (!response.ok) {
-                    router.replace('/signin');
-                    return;
-                }
-                const data = await response.json();
-                setAssignerID(data.user);
-            } catch (error) {
-                console.error('Auth check failed:', error);
-                router.replace('/signin');
-            }
-        };
-        checkAuth();
-    }, [router]);
+    //auth bundle
+        const [AssignerID, setAssignerID] = useState([]);
+        useEffect(() => {
+                const checkAuth = async () => {
+                    try {
+                        const response = await fetch('../api/auth/check', { credentials: 'include' });
+                        if (!response.ok) {
+                            router.replace('/signin');
+                            return;
+                        }
+                        const data = await response.json();
+                        setAssignerID(data.user);
+                    } catch (error) {
+                        console.error('Auth check failed:', error);
+                        router.replace('/signin');
+                    }
+                };
+                checkAuth();
+            }, [router]);
+        
+        //authorization bundle
+        const [authorization, setAuthorization] = useState('');
+    
+        //fetch perms
+        useEffect(() => {
+            if (!AssignerID) return;
+    
+            const fetchAuthorization = async () => {
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                operation: 'authorization',
+                params: { id: AssignerID }
+          })
+        });
+    
+        const result = await authorizationResponse.json();
+        setAuthorization(result.data);
+      };
+      fetchAuthorization();
+      }, [AssignerID]);
+    
+      //reroute for personnels
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.ispersonnel == 1) {
+            router.replace('/personal');
+        }
+    }, [authorization, router]);
+    
+      //reroute for specific perms
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.workpermission == 0) {
+            router.replace('/task');
+        }
+    }, [authorization, router]);
 
 
     // --- Data Fetching Hook: Personnel and Projects ---

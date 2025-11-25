@@ -132,6 +132,39 @@ export default function DepartmentPage() {
                 fetchDepartmentList();
     }, [router, fetchDepartment, fetchDepartmentList]); 
 
+    //authorization bundle
+        const [authorization, setAuthorization] = useState('');
+    
+        //fetch perms
+        useEffect(() => {
+            if (!AssignerID) return;
+    
+            const fetchAuthorization = async () => {
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                operation: 'authorization',
+                params: { id: AssignerID }
+          })
+        });
+    
+        const result = await authorizationResponse.json();
+        setAuthorization(result.data);
+      };
+      fetchAuthorization();
+      }, [AssignerID]);
+    
+      //reroute for personnels
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.ispersonnel == 1) {
+            router.replace('/personal');
+        }
+    }, [authorization, router]);
+
     // Group and Filter Logic 
     const groupedDepartments = useMemo(() => {
         let currentPositions = positions;
@@ -447,7 +480,7 @@ export default function DepartmentPage() {
                 <h1 className="text-2xl font-bold">
                     {"Positions & Departments List 📊"}
                 </h1>
-                <div className="flex space-x-3">
+                {authorization.isadmin == 1 && (<div className="flex space-x-3">
                     <Button
                         text="Add Position"
                         style="Filled" 
@@ -472,7 +505,7 @@ export default function DepartmentPage() {
                             setEditingPositionId(null); // Exit edit mode
                         }}
                     />
-                </div>
+                </div>)}
             </div>
             
             {/* ADD POSITION INPUT FIELD (omitted for brevity) */}
@@ -563,7 +596,7 @@ export default function DepartmentPage() {
                         <tr className="bg-gray-100">
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Department</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">Total Positions / Position Name / Base Salary</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Actions</th>
+                            {authorization.isadmin == 1 && (<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">Actions</th>)}
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -594,7 +627,7 @@ export default function DepartmentPage() {
           >
             &#9654;
           </span>
-          <Button
+          {authorization.isadmin == 1 && (<Button
             text="Edit"
             style="Filled"
             className="bg-yellow-500 hover:bg-yellow-600 text-white p-1 px-3 text-xs rounded-md shadow-sm"
@@ -606,8 +639,8 @@ export default function DepartmentPage() {
               setShowAddPositionInput(false);
               setEditingPositionId(null);
             }}
-          />
-          <Button
+          />)}
+          {authorization.isadmin == 1 && (<Button
             text="Delete"
             style="Filled"
             className="bg-red-500 hover:bg-red-600 text-white p-1 px-3 text-xs rounded-md shadow-sm"
@@ -615,7 +648,7 @@ export default function DepartmentPage() {
               e.stopPropagation();
               handleDeleteDepartment(dept.departmentid, dept.departmentname);
             }}
-          />
+          />)}
         </td>
       </tr>
 
@@ -669,7 +702,7 @@ export default function DepartmentPage() {
                       : "N/A"}
                   </span>
                 </td>
-                <td className="px-6 py-2 text-sm text-gray-600 space-x-2">
+                {authorization.isadmin == 1 && (<td className="px-6 py-2 text-sm text-gray-600 space-x-2">
                   <Button
                     text="Edit"
                     style="Filled"
@@ -692,7 +725,7 @@ export default function DepartmentPage() {
                       handleDeletePosition(pos.positionid, pos.positionname);
                     }}
                   />
-                </td>
+                </td>)}
               </tr>
 
               {/* Position Inline Edit */}

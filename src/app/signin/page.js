@@ -61,8 +61,6 @@ export default function SignInPage() {
                 alert("Invalid email or password.");
                 return;
             }
-            
-            console.log('ID: ' + result.data.UserID);
 
             const authorizationResponse = await fetch('/db/dbroute', {
                 method: 'POST',
@@ -79,8 +77,6 @@ export default function SignInPage() {
             });
 
             const result2 = await authorizationResponse.json();
-
-            console.log('data: '+ result2.data.ispersonnel);
 
             if (!authorizationResponse.ok) {
                 throw new Error(result2.error || 'Divergence failed');

@@ -46,7 +46,8 @@ export async function authorization(id)
                 query,
                 [id],
             );
-            console.log('Authorization check for ' + [id] + 'successful!');
+            console.log('Authorization check for ' + [id] + ' successful!');
+            console.log(rows[0]);
             return {success: true, data: rows[0]};
     }
     catch (error)
@@ -74,9 +75,13 @@ export async function getAccess(id)
     }
 }
 // Get Position
-export async function getPositions() {
+export async function getPositions(data) {
     try {
-        const query = `
+        let query;
+        console.log('data = ' + data);
+        if(data=='1')
+        {
+        query = `
             SELECT
                 P.PositionID AS positionid,
                 P.PositionName AS positionname,
@@ -88,6 +93,23 @@ export async function getPositions() {
             LEFT JOIN
                 Department as D ON P.DepartmentID = D.DepartmentID
         `;
+        }
+        else
+        {
+            query = `
+            SELECT
+                P.PositionID AS positionid,
+                P.PositionName AS positionname,
+                D.DepartmentName AS departmentname,
+                P.BaseSalary AS salary,
+                D.DepartmentId AS departmentid
+            FROM
+                Position as P
+            LEFT JOIN
+                Department as D ON P.DepartmentID = D.DepartmentID
+			WHERE AccessID = '4'
+        `;
+        }
         const [rows] = await db.execute(query);
         return { success: true, data: rows };
     } catch (error) {
@@ -338,17 +360,18 @@ export async function getPersonnelById(id) {
           M.Name AS managername,
           account.Email AS email,
           Pos.BaseSalary AS basesalary,
+          Pos.AccessID AS accessid,
           
           -- Attendance percentage (count of days checked_in / total days)
           ROUND(
-            (SUM(CASE WHEN A.CheckInStatus = 'checked_in' THEN 1 ELSE 0 END) / COUNT(A.AttendanceDate)) * 100,
+            (SUM(CASE WHEN A.CheckInStatus = 'Checked In' THEN 1 ELSE 0 END) / COUNT(A.AttendanceDate)) * 100,
             2
           ) AS attendanceRate,
 
           -- Salary = Base Salary * (attendanceRate / 100)
           ROUND(
             Pos.BaseSalary * (
-              (SUM(CASE WHEN A.CheckInStatus = 'checked_in' THEN 1 ELSE 0 END) / COUNT(A.AttendanceDate))
+              (SUM(CASE WHEN A.CheckInStatus = 'Checked In' THEN 1 ELSE 0 END) / COUNT(A.AttendanceDate))
             ),
             2
           ) AS salary
@@ -1073,7 +1096,7 @@ export async function createAttendance()
     {
         const query = `
         INSERT INTO Attendance (UserID, AttendanceDate, CheckInStatus)
-            SELECT p.UserID, CURDATE(), 'pending'
+            SELECT p.UserID, CURDATE(), 'Pending'
             FROM Personnel p
             WHERE NOT EXISTS (
     SELECT 1 
@@ -1097,11 +1120,11 @@ export async function checkIn(id, date) {
   try {
     const query = `
       UPDATE Attendance
-      SET CheckInStatus = 'checked_in',
+      SET CheckInStatus = 'Checked In',
           CheckInDateTime = NOW()
       WHERE UserID = ?
         AND AttendanceDate = CURDATE()
-        AND CheckInStatus = 'pending';
+        AND CheckInStatus = 'Pending';
     `;
 
     const [result] = await db.execute(query, [id]);
@@ -1119,12 +1142,12 @@ export async function checkOut(id, date) {
   try {
     const query = `
       UPDATE Attendance
-      SET CheckOutStatus = 'checked_out',
+      SET CheckOutStatus = 'Checked Out',
           CheckOutDateTime = NOW()
       WHERE UserID = ?
         AND AttendanceDate = CURDATE()
-        AND CheckInStatus = 'checked_in'
-        AND CheckOutStatus = 'not_checked_out';
+        AND CheckInStatus = 'Checked In'
+        AND CheckOutStatus = 'Pending';
     `;
 
     const [result] = await db.execute(query, [id]);

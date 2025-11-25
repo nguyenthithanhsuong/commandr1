@@ -38,7 +38,7 @@ export async function POST(request) {
                     break;
             //position
             case 'getPosition':
-                result = await dbOps.getPositions();
+                result = await dbOps.getPositions(params.data);
                 break;
             case 'addPosition':
                 result = await dbOps.addPosition(params.data);

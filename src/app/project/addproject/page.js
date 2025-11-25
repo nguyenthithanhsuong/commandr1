@@ -17,32 +17,74 @@ export default function AddProjectPage() {
     });
     
     // State to hold the AssignerID (logged-in user's ID)
-    const [assignerId, setAssignerId] = useState(null);
     const [isLoading, setIsLoading] = useState(true); // Loading state for auth check/initial setup
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
 
     // --- Authentication and Assigner ID Fetching ---
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const response = await fetch('../api/auth/check', { credentials: 'include' });
-                if (!response.ok) {
-                    router.replace('/signin');
-                    return;
-                }
-                const data = await response.json();
-                
-                setAssignerId(data.user); 
-                setIsLoading(false); // Finished initial loading
-            } catch (error) {
-                console.error('Auth check failed:', error);
-                router.replace('/signin');
+    //auth bundle
+            const [AssignerID, setAssignerID] = useState([]);
+            useEffect(() => {
+                    const checkAuth = async () => {
+                        try {
+                            const response = await fetch('../api/auth/check', { credentials: 'include' });
+                            if (!response.ok) {
+                                router.replace('/signin');
+                                return;
+                            }
+                            const data = await response.json();
+                            setAssignerID(data.user);
+                        } catch (error) {
+                            console.error('Auth check failed:', error);
+                            router.replace('/signin');
+                        }
+                    };
+                    checkAuth();
+                }, [router]);
+            
+            //authorization bundle
+            const [authorization, setAuthorization] = useState('');
+        
+            //fetch perms
+            useEffect(() => {
+                if (!AssignerID) return;
+        
+                const fetchAuthorization = async () => {
+                const authorizationResponse = await fetch('/db/dbroute', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                    operation: 'authorization',
+                    params: { id: AssignerID }
+              })
+            });
+        
+            const result = await authorizationResponse.json();
+            setAuthorization(result.data);
+          };
+          fetchAuthorization();
+          }, [AssignerID]);
+        
+          //reroute for personnels
+          useEffect(() => {
+            if (!authorization) return;  // Wait until authorization is set
+        
+            if (authorization.ispersonnel == 1) {
+                router.replace('/personal');
             }
-        };
-        checkAuth();
-    }, [router]);
+        }, [authorization, router]);
+        
+          //reroute for specific perms
+          useEffect(() => {
+            if (!authorization) return;  // Wait until authorization is set
+        
+            if (authorization.workpermission == 0) {
+                router.replace('/project');
+            }
+            setIsLoading(false);
+        }, [authorization, router]);
 
     // --- Form Fields Definition ---
     const fields = [
@@ -74,7 +116,7 @@ export default function AddProjectPage() {
 
         // Basic validation
         const requiredFields = ['projectname', 'projectstatus'];
-        const isValid = requiredFields.every(field => formData[field]) && assignerId !== null;
+        const isValid = requiredFields.every(field => formData[field]) && AssignerID !== null;
 
         if (!isValid) {
             setMessage("Please fill in all required fields (Project Name and Status) and ensure you are logged in.");
@@ -92,7 +134,7 @@ export default function AddProjectPage() {
                 body: JSON.stringify({
                     operation: 'createProject', // **IMPORTANT: This must match your server action**
                     params: {
-                        id: assignerId, // The logged-in user who is creating/assigning the project
+                        id: AssignerID, // The logged-in user who is creating/assigning the project
                         data: formData, // Pass all project data
                     },
                 }),
@@ -130,7 +172,7 @@ export default function AddProjectPage() {
     }
     
     // Fallback if AssignerID is somehow missing after loading
-    if (assignerId === null) {
+    if (AssignerID === null) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <p className="text-xl font-semibold text-red-600">

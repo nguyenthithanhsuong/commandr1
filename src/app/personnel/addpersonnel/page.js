@@ -13,7 +13,6 @@ export default function AddPersonnelPage() {
     // 🆕 NEW STATE: To hold fetched positions and handle loading
     const [positions, setPositions] = useState([]);
     const [isLoading, setIsLoading] = useState(true); // ⬅️ Set default to true now
-    const [AssignerID, setAssignerID] = useState([]);
     
     const [user, setUser] = useState(null); 
 
@@ -30,6 +29,9 @@ export default function AddPersonnelPage() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
+
+    //auth bundle
+    const [AssignerID, setAssignerID] = useState([]);
     useEffect(() => {
             const checkAuth = async () => {
                 try {
@@ -47,17 +49,60 @@ export default function AddPersonnelPage() {
             };
             checkAuth();
         }, [router]);
+    
+    //authorization bundle
+    const [authorization, setAuthorization] = useState('');
 
+    //fetch perms
+    useEffect(() => {
+        if (!AssignerID) return;
+
+        const fetchAuthorization = async () => {
+        const authorizationResponse = await fetch('/db/dbroute', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+            operation: 'authorization',
+            params: { id: AssignerID }
+      })
+    });
+
+    const result = await authorizationResponse.json();
+    setAuthorization(result.data);
+  };
+  fetchAuthorization();
+  }, [AssignerID]);
+
+  //reroute for personnels
+  useEffect(() => {
+    if (!authorization) return;  // Wait until authorization is set
+
+    if (authorization.ispersonnel == 1) {
+        router.replace('/personal');
+    }
+}, [authorization, router]);
+
+  //reroute for specific perms
+  useEffect(() => {
+    if (!authorization) return;  // Wait until authorization is set
+
+    if (authorization.personnelpermission == 0) {
+        router.replace('/personnel');
+    }
+}, [authorization, router]);
 
 
     useEffect(() => {
+        if(!authorization) return;
         async function fetchPositions() {
             try {
                 // Call the new API endpoint to get positions
                 const response = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ operation: 'getPosition' }),
+                    body: JSON.stringify({ operation: 'getPosition' , params: {data: authorization.isadmin}
+                    }),
                 });
                 
                 const data = await response.json();
@@ -82,7 +127,7 @@ export default function AddPersonnelPage() {
             }
         }
         fetchPositions();
-    }, []); // Empty dependency array means it runs once on mount
+    }, [authorization]); // Empty dependency array means it runs once on mount
 
     // ⬅️ UPDATED FIELD DEFINITIONS: Position and Department fields changed
     const fields = [

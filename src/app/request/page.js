@@ -45,7 +45,6 @@ export default function RequestPage() {
       } catch (error) {
         console.error("Error fetching requests:", error);
       }
-      setIsLoading(false);
     };
 
   useEffect(() => {
@@ -67,6 +66,42 @@ export default function RequestPage() {
     checkAuth();
     fetchRequests();
   }, [router]);
+
+  //authorization bundle
+        const [authorization, setAuthorization] = useState('');
+    
+        //fetch perms
+        useEffect(() => {
+            if (!AssignerID) return;
+    
+            const fetchAuthorization = async () => {
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                operation: 'authorization',
+                params: { id: AssignerID }
+          })
+        });
+    
+        const result = await authorizationResponse.json();
+        setAuthorization(result.data);
+        console.log(result.data);
+      };
+      fetchAuthorization();
+      }, [AssignerID]);
+    
+      //reroute for personnels
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.ispersonnel == 1) {
+            router.replace('/personal');
+        }
+        
+      setIsLoading(false);
+    }, [authorization, router]);
 
   const filteredRequests = useMemo(() => {
     if (!searchTerm) return Requests;
@@ -190,20 +225,20 @@ const handleDelete = async (req) => {
             }}
 
           />
-          <Button
+          {authorization.isadmin==1&&(<Button
             text={isDeleteMode ? "Exit Delete Mode" : "Delete Requests"}
             style="Filled"
             className="bg-gray-700 text-white px-4 py-2 rounded-md"
             onClick={() => {setisDeleteMode(!isDeleteMode);
             setIsManageMode(false);
             }}
-          />
-          <Button
+          />)}
+          {authorization.isadmin==1&&(<Button
             text="Add New Request"
             style="Filled"
             className="text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 p-2 text-sm rounded-md shadow-md transition duration-150"
             onClick={() => router.push("/request/addrequest")}
-          />
+          />)}
         </div>
       </div>
 

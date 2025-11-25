@@ -31,6 +31,59 @@ export default function ViewTaskPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [task, setTask] = useState(null);
 
+//auth bundle
+        const [AssignerID, setAssignerID] = useState([]);
+        useEffect(() => {
+                const checkAuth = async () => {
+                    try {
+                        const response = await fetch('../api/auth/check', { credentials: 'include' });
+                        if (!response.ok) {
+                            router.replace('/signin');
+                            return;
+                        }
+                        const data = await response.json();
+                        setAssignerID(data.user);
+                    } catch (error) {
+                        console.error('Auth check failed:', error);
+                        router.replace('/signin');
+                    }
+                };
+                checkAuth();
+            }, [router]);
+        
+        //authorization bundle
+        const [authorization, setAuthorization] = useState('');
+    
+        //fetch perms
+        useEffect(() => {
+            if (!AssignerID) return;
+    
+            const fetchAuthorization = async () => {
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                operation: 'authorization',
+                params: { id: AssignerID }
+          })
+        });
+    
+        const result = await authorizationResponse.json();
+        setAuthorization(result.data);
+      };
+      fetchAuthorization();
+      }, [AssignerID]);
+    
+      //reroute for personnels
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.ispersonnel == 1) {
+            router.replace('/personal');
+        }
+    }, [authorization, router]);
+
     // --- Data Fetching Effect ---
     useEffect(() => {
         if (!taskid) {
@@ -148,7 +201,7 @@ export default function ViewTaskPage() {
                         <p className="text-xl text-gray-600 mt-1">Viewing: <span className="font-semibold">{task.taskname}</span></p>
                     </div>
                     
-                    <div className="flex space-x-3">
+                    {authorization.workpermission == 1 && (<div className="flex space-x-3">
                         {/* Update Button */}
                         <Button
                             text="Update Task"
@@ -164,7 +217,7 @@ export default function ViewTaskPage() {
                             className="bg-red-600 text-white hover:bg-red-700 transition duration-200 ease-in-out px-4 py-2 font-medium rounded-lg shadow-md"
                             onClick={handleDelete}
                         />
-                    </div>
+                    </div>)}
                 </div>
 
                 {/* Details Card (White Background) */}

@@ -22,6 +22,68 @@ export default function UpdatePersonnelPage() {
         return dateString ? new Date(dateString).toISOString().substring(0, 10) : '';
     };
 
+    //auth bundle
+        const [AssignerID, setAssignerID] = useState([]);
+        useEffect(() => {
+                const checkAuth = async () => {
+                    try {
+                        const response = await fetch('../api/auth/check', { credentials: 'include' });
+                        if (!response.ok) {
+                            router.replace('/signin');
+                            return;
+                        }
+                        const data = await response.json();
+                        setAssignerID(data.user);
+                    } catch (error) {
+                        console.error('Auth check failed:', error);
+                        router.replace('/signin');
+                    }
+                };
+                checkAuth();
+            }, [router]);
+        
+        //authorization bundle
+        const [authorization, setAuthorization] = useState('');
+    
+        //fetch perms
+        useEffect(() => {
+            if (!AssignerID) return;
+    
+            const fetchAuthorization = async () => {
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                operation: 'authorization',
+                params: { id: AssignerID }
+          })
+        });
+    
+        const result = await authorizationResponse.json();
+        setAuthorization(result.data);
+      };
+      fetchAuthorization();
+      }, [AssignerID]);
+    
+      //reroute for personnels
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.ispersonnel == 1) {
+            router.replace('/personal');
+        }
+    }, [authorization, router]);
+    
+      //reroute for specific perms
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.personnelpermission == 0) {
+            router.replace('/personnel');
+        }
+    }, [authorization, router]);
+
     // --- Combined Data Fetching Effect (Personnel Data + Positions) ---
     useEffect(() => {
         if (!personnelId) {
@@ -29,7 +91,10 @@ export default function UpdatePersonnelPage() {
             setIsLoading(false);
             return;
         }
+    }, [personnelId]); 
 
+     useEffect(() => {
+        if(!authorization) return;
         async function fetchAllData() {
             let personnelData = null;
             let fetchedPositions = [];
@@ -54,7 +119,7 @@ export default function UpdatePersonnelPage() {
                 const positionsResponse = await fetch('/db/dbroute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ operation: 'getPosition' }),
+                    body: JSON.stringify({ operation: 'getPosition' , params: {data: authorization.isadmin} }),
                 });
                 const posData = await positionsResponse.json();
                 if (positionsResponse.ok && posData.success) {
@@ -92,7 +157,7 @@ export default function UpdatePersonnelPage() {
         }
 
         fetchAllData();
-    }, [personnelId]); 
+    }, [authorization]); 
 
     // ⬅️ UPDATED FIELD DEFINITIONS: Changed Position to use PositionID and dynamic select
     const fields = [
@@ -105,7 +170,6 @@ export default function UpdatePersonnelPage() {
         { label: "Position", name: "positionid", type: "select-dynamic", required: true }, // ⬅️ Use positionid
         // REMOVED 'Department' as it's derived from PositionID
         { label: "Employment Date", name: "employdate", type: "date", required: true },
-        { label: "Manager ID", name: "managerid", type: "number", required: true },
         // Account Info
         { label: "Email", name: "email", type: "email", required: true }, 
         { label: "New Password (Optional)", name: "password", type: "password", required: false },

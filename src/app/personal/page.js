@@ -371,12 +371,12 @@ export default function PersonalPage() {
 
     const canCheckIn =
         attendance &&
-        (attendance.CheckInStatus === 'pending');
+        (attendance.CheckInStatus === 'Pending');
 
     const canCheckOut =
         attendance &&
-        attendance.CheckInStatus === 'checked_in' &&
-        attendance.CheckOutStatus === 'not_checked_out' ;
+        attendance.CheckInStatus === 'Checked In' &&
+        attendance.CheckOutStatus === 'Pending' ;
 
     return (
         <div className="min-h-screen bg-gray-50">
