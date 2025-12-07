@@ -25,7 +25,7 @@ export default function AddTaskPage() {
     const [message, setMessage] = useState('');
     
     //auth bundle
-        const [AssignerID, setAssignerID] = useState([]);
+        const [AssignerID, setAssignerID] = useState(null);
         useEffect(() => {
                 const checkAuth = async () => {
                     try {

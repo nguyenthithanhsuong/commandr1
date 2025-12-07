@@ -33,7 +33,7 @@ export default function ViewProjectPage() {
     const [tasks, setTasks] = useState([]);
 
 //auth bundle
-            const [AssignerID, setAssignerID] = useState([]);
+            const [AssignerID, setAssignerID] = useState(null);
             useEffect(() => {
                     const checkAuth = async () => {
                         try {

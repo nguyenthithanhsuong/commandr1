@@ -7,7 +7,7 @@ export async function authenticateUser(email, password) {
         const query=
         `Select * From Account
         JOIN personnel on Account.UserID = personnel.UserID
-        WHERE email = ? AND Password = ? AND IsActive = 1`
+        WHERE email = ? AND password = ? AND IsActive = 1`
         const [rows] = await db.execute(
             query,
             [email, password]
@@ -358,7 +358,7 @@ export async function getPersonnelById(id) {
           P.IsActive AS isactive,
           P.TerminationDate AS terminationdate,
           M.Name AS managername,
-          account.Email AS email,
+          account.email AS email,
           Pos.BaseSalary AS basesalary,
           Pos.AccessID AS accessid,
           
@@ -408,16 +408,15 @@ export async function getPersonnelById(id) {
 
 // Add Personnel
 export async function addPersonnel(id, data) {
-    try
-    {
+    try {
         const managerId = id; 
-    
+
+        // Insert personnel
         const query = `
-        INSERT into personnel
-        (Name, DateOfbirth, Gender, PhoneNumber, PositionID, EmployDate, IsActive, ManagerID)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `; 
-        // 9 placeholders for 9 columns
+            INSERT INTO personnel
+            (Name, DateOfbirth, Gender, PhoneNumber, PositionID, EmployDate, IsActive, ManagerID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
 
         const [result] = await db.execute(query, [
             data.name,
@@ -426,30 +425,44 @@ export async function addPersonnel(id, data) {
             data.phonenumber,
             data.positionid,
             data.employdate,
-            1, // Use the boolean isactive from formData, convert to 1/0
-            managerId // Use the ID passed to the function
-        ]);
-        
-        const newPersonnelId = result.insertId; 
-
-        const query2 = `
-        Insert into Account (UserID, Email, Password, HRID)
-        VALUES (?, ?, ?, ?)
-        `;
-        
-        await db.execute(query2, [
-            newPersonnelId, // UserID = New Personnel ID
-            data.email,
-            data.password,
-            managerId, // HRID = Manager ID
+            1, // isactive
+            managerId
         ]);
 
-        return { success: true, data: result };
+        const newPersonnelId = result.insertId;
+
+        try {
+            // Insert account
+            const query2 = `
+                INSERT INTO Account (UserID, email, password, HRID)
+                VALUES (?, ?, ?, ?)
+            `;
+
+            await db.execute(query2, [
+                newPersonnelId,
+                data.email,
+                data.password,
+                managerId
+            ]);
+
+            // Success
+            return { success: true, data: result };
+
+        } catch (accountError) {
+            console.error("Account creation failed:", accountError);
+
+            // Rollback personnel insertion
+            await db.execute(`DELETE FROM personnel WHERE PersonnelID = ?`, [newPersonnelId]);
+
+            return { success: false, error: "Failed to add account, personnel rollback executed." };
+        }
+
     } catch (error) {
         console.error("Add personnel error:", error);
         return { success: false, error: "Failed to add personnel" };
     }
 }
+
 //Update Personnel
 export async function updatePersonnel(id, data) {
     try {
@@ -484,11 +497,11 @@ export async function updatePersonnel(id, data) {
             let accountUpdateValues = [];
 
             if (data.email) {
-                accountUpdateParts.push("Email = ?");
+                accountUpdateParts.push("email = ?");
                 accountUpdateValues.push(data.email);
             }
             if (data.password) {
-                accountUpdateParts.push("Password = ?");
+                accountUpdateParts.push("password = ?");
                 accountUpdateValues.push(data.password);
             }
 

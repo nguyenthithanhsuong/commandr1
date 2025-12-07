@@ -242,7 +242,7 @@ export default function ViewPersonnelPage() {
 
                     {/* FIXED BUTTON RENDERING */}
                     {(
-    authorization.isadmin === '1' ||
+    authorization.isadmin == '1' ||
     (
         user.isactive == '1' &&
         user.accessid == '4' &&

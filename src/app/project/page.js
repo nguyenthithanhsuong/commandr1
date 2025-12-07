@@ -29,7 +29,7 @@ export default function ProjectPage() {
     };
 
 //auth bundle
-        const [AssignerID, setAssignerID] = useState([]);
+        const [AssignerID, setAssignerID] = useState(null);
         useEffect(() => {
                 const checkAuth = async () => {
                     try {

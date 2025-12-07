@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "mocha --require @babel/register \"test/**/*.test.js\""
   },
   "dependencies": {
     "mysql2": "^3.15.3",
@@ -13,11 +14,24 @@
     "node-cron": "^4.2.1",
     "prop-types": "^15.8.1",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "selenium-webdriver": "^4.38.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/register": "^7.28.3",
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.10.1",
     "babel-plugin-react-compiler": "1.0.0",
+    "mocha": "^11.7.5",
     "tailwindcss": "^4"
-  }
+  },
+  "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).",
+  "main": "middleware.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }

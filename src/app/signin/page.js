@@ -9,10 +9,9 @@ export default function SignInPage() {
     const router = useRouter();
     
     //process:
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState(""); 
+    const [email, setemail] = useState("");
+    const [password, setpassword] = useState(""); 
     const [error, setError] = useState("");
-    let ID = 0;
     const generateAttendance = async () => {
     try {
       const response = await fetch("/db/dbroute", {
@@ -35,7 +34,16 @@ export default function SignInPage() {
         console.log("Submitting sign-in form with:", { email, password });
         e.preventDefault();
         setError("");
-        
+        if(email.length == 0)
+        {
+            alert("Email cannot be blank!");
+            return;
+        }
+        if(password.length == 0)
+        {
+            alert("Password cannot be blank!");
+            return;
+        }
         try {
             //fetch to api/db to authenticate
             const loginResponse = await fetch('/db/dbroute', {
@@ -52,12 +60,13 @@ export default function SignInPage() {
                     }
                 }),
             });
-
+            
             const result = await loginResponse.json();
+            console.log(result);
             if (!loginResponse.ok) {
                 throw new Error(result.error || 'Sign in failed');
             }
-            if (result.data.length === 0) {
+            if (result.data.length == 0) {
                 alert("Invalid email or password.");
                 return;
             }
@@ -119,10 +128,10 @@ export default function SignInPage() {
                     onClick={(e) => console.log('Form clicked:', e.target)}
                 >
                     <label className="flex flex-col text-sm">
-                        <span className="mb-1 font-medium">Email:</span>
+                        <span className="mb-1 font-medium">email:</span>
                         <input
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => setemail(e.target.value)}
                             name="email"
                             type="email"
                             required
@@ -130,10 +139,10 @@ export default function SignInPage() {
                         />
                     </label>
                     <label className="flex flex-col text-sm">
-                        <span className="mb-1 font-medium">Password:</span>
+                        <span className="mb-1 font-medium">password:</span>
                         <input
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e) => setpassword(e.target.value)}
                             name="password"
                             type="password"
                             required

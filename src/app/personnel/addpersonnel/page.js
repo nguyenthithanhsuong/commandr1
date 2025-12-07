@@ -31,7 +31,7 @@ export default function AddPersonnelPage() {
     const [message, setMessage] = useState('');
 
     //auth bundle
-    const [AssignerID, setAssignerID] = useState([]);
+    const [AssignerID, setAssignerID] = useState(null);
     useEffect(() => {
             const checkAuth = async () => {
                 try {
@@ -138,8 +138,8 @@ export default function AddPersonnelPage() {
         // ⬅️ UPDATED: This field will now be a dynamic select
         { label: "Position", name: "positionid", type: "select-dynamic", required: true },
         { label: "Employment Date", name: "employdate", type: "date", required: true },
-        { label: "Email", name: "email", type: "email", required: true },
-        { label: "Initial Password", name: "password", type: "password", required: true },
+        { label: "email", name: "email", type: "email", required: true },
+        { label: "Initial password", name: "password", type: "password", required: true },
     ];
 
     const handleChange = (e) => {

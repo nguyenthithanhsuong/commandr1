@@ -10,7 +10,15 @@ function parseCookies(cookieHeader) {
         if (idx === -1) continue;
         const name = part.slice(0, idx).trim();
         const val = part.slice(idx + 1).trim();
-        result[name] = decodeURIComponent(val);
+        // decodeURIComponent can throw if the cookie value contains malformed
+        // percent-encodings; fall back to the raw value in that case.
+        try {
+            result[name] = decodeURIComponent(val);
+        } catch (err) {
+            // log once for debugging; use raw value as fallback
+            console.warn('/api/auth/check: cookie decode failed for', name, val);
+            result[name] = val;
+        }
     }
     return result;
 }

@@ -73,6 +73,40 @@ export default function ReportPage() {
     fetchReports();
   }, [router]);
 
+//authorization bundle
+        const [authorization, setAuthorization] = useState('');
+    
+        //fetch perms
+        useEffect(() => {
+            if (!AssignerID) return;
+    
+            const fetchAuthorization = async () => {
+            const authorizationResponse = await fetch('/db/dbroute', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                operation: 'authorization',
+                params: { id: AssignerID }
+          })
+        });
+    
+        const result = await authorizationResponse.json();
+        setAuthorization(result.data);
+      };
+      fetchAuthorization();
+      }, [AssignerID]);
+    
+      //reroute for personnels
+      useEffect(() => {
+        if (!authorization) return;  // Wait until authorization is set
+    
+        if (authorization.ispersonnel == 1) {
+            router.replace('/personal');
+        }
+    }, [authorization, router]);
+
+
   // Derived Data
   const { personnel, projects, tasks } = reportData;
 
@@ -113,7 +147,7 @@ const employeePerformance = useMemo(() => {
     const empAttendance = reportData.attendance.filter((a) => a.UserID === person.UserID);
     const totalDays = empAttendance.length;
     const attendedDays = empAttendance.filter(
-      (a) => a.CheckInStatus === "checked_in" || a.CheckInStatus === "on_leave"
+      (a) => a.CheckInStatus === "Checked In" || a.CheckOutStatus === "Checked Out"
     ).length;
     const attendanceRate = totalDays ? ((attendedDays / totalDays) * 100).toFixed(2) : 0;
 

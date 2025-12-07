@@ -413,7 +413,7 @@ export default function PersonalPage() {
                         </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                             <InfoItem label="Name:" value={personnel.name} />
-                            <InfoItem label="Email" value={personnel.email} />
+                            <InfoItem label="email" value={personnel.email} />
                             <InfoItem label="Position" value={personnel.position} />
                             <InfoItem label="Department" value={personnel.department} />
                         </div>

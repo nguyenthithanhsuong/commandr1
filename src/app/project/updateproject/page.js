@@ -21,7 +21,7 @@ export default function UpdateProjectPage() { // Renamed component
             });
 
         //auth bundle
-                    const [AssignerID, setAssignerID] = useState([]);
+                    const [AssignerID, setAssignerID] = useState(null);
                     useEffect(() => {
                             const checkAuth = async () => {
                                 try {

@@ -23,7 +23,7 @@ export default function UpdatePersonnelPage() {
     };
 
     //auth bundle
-        const [AssignerID, setAssignerID] = useState([]);
+        const [AssignerID, setAssignerID] = useState(null);
         useEffect(() => {
                 const checkAuth = async () => {
                     try {
@@ -171,8 +171,8 @@ export default function UpdatePersonnelPage() {
         // REMOVED 'Department' as it's derived from PositionID
         { label: "Employment Date", name: "employdate", type: "date", required: true },
         // Account Info
-        { label: "Email", name: "email", type: "email", required: true }, 
-        { label: "New Password (Optional)", name: "password", type: "password", required: false },
+        { label: "email", name: "email", type: "email", required: true }, 
+        { label: "New password (Optional)", name: "password", type: "password", required: false },
     ];
 
     // --- Form Handling ---

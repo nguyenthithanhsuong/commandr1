@@ -32,7 +32,7 @@ export default function ViewTaskPage() {
     const [task, setTask] = useState(null);
 
 //auth bundle
-        const [AssignerID, setAssignerID] = useState([]);
+        const [AssignerID, setAssignerID] = useState(null);
         useEffect(() => {
                 const checkAuth = async () => {
                     try {
@@ -57,7 +57,6 @@ export default function ViewTaskPage() {
         //fetch perms
         useEffect(() => {
             if (!AssignerID) return;
-    
             const fetchAuthorization = async () => {
             const authorizationResponse = await fetch('/db/dbroute', {
                 method: 'POST',

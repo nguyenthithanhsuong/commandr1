@@ -24,7 +24,7 @@ export default function AddProjectPage() {
 
     // --- Authentication and Assigner ID Fetching ---
     //auth bundle
-            const [AssignerID, setAssignerID] = useState([]);
+            const [AssignerID, setAssignerID] = useState(null);
             useEffect(() => {
                     const checkAuth = async () => {
                         try {

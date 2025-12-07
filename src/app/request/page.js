@@ -11,7 +11,7 @@ export default function RequestPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isManageMode, setIsManageMode] = useState(false); // ✅ NEW STATE
   const [isDeleteMode, setisDeleteMode] = useState(false);
-  const [AssignerID, setAssignerID] = useState([]);
+  const [AssignerID, setAssignerID] = useState(null);
     const NavLink = ({ name, href }) => {
         const isActive = router.pathname === href || (name === 'Personnel' && router.pathname === '/personnel');
         
@@ -127,11 +127,13 @@ export default function RequestPage() {
 
   // ✅ Approve / Decline handlers
   const handleAccept = async (req) => {
-    const confirmed = window.confirm(`Approve request from ${req.requestername}?`);
+  const confirmed = window.confirm(`Approve request from ${req.requestername}?`);
   if (!confirmed) return;
+
+  try {
     console.log("Accepted:", req.requestid);
-    // Example: send to backend
-    await fetch("/db/dbroute", {
+
+    const res = await fetch("/db/dbroute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -139,38 +141,70 @@ export default function RequestPage() {
         params: { id: req.requestid, data: AssignerID, status: "Approved" },
       }),
     });
-    await fetchRequests();
-  };
 
-  const handleDecline = async (req) => {
-    const confirmed = window.confirm(`Decline request from ${req.requestername}?`);
+    if (!res.ok) throw new Error("Server error");
+
+    alert("Request approved successfully!");
+    await fetchRequests();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to approve request.");
+  }
+};
+
+
+const handleDecline = async (req) => {
+  const confirmed = window.confirm(`Decline request from ${req.requestername}?`);
   if (!confirmed) return;
+
+  try {
     console.log("Declined:", req.requestid);
-    await fetch("/db/dbroute", {
+
+    const res = await fetch("/db/dbroute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         operation: "updateRequestStatus",
-        params: { id: req.requestid, data: AssignerID , status: "Rejected" },
+        params: { id: req.requestid, data: AssignerID, status: "Rejected" },
       }),
     });
+
+    if (!res.ok) throw new Error("Server error");
+
+    alert("Request declined successfully!");
     await fetchRequests();
-  };
+  } catch (err) {
+    console.error(err);
+    alert("Failed to decline request.");
+  }
+};
+
 
 const handleDelete = async (req) => {
-    const confirmed = window.confirm(`Delete request from ${req.requestername}?`);
+  const confirmed = window.confirm(`Delete request from ${req.requestername}?`);
   if (!confirmed) return;
+
+  try {
     console.log("Delete:", req.requestid);
-    await fetch("/db/dbroute", {
+
+    const res = await fetch("/db/dbroute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         operation: "deleteRequest",
-        params: { id: req.requestid},
+        params: { id: req.requestid },
       }),
     });
+
+    if (!res.ok) throw new Error("Server error");
+
+    alert("Request deleted successfully!");
     await fetchRequests();
-  };
+  } catch (err) {
+    console.error(err);
+    alert("Failed to delete request.");
+  }
+};
 
   if (isLoading) return <div className="p-4">Loading Requests...</div>;
 

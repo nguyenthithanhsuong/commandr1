@@ -11,7 +11,7 @@ export default function DepartmentPage() {
     const [positions, setPositions] = useState([]); 
     const [searchTerm, setSearchTerm] = useState('');
     const [openDepartments, setOpenDepartments] = useState({});
-    const [AssignerID, setAssignerID] = useState([]);
+    const [AssignerID, setAssignerID] = useState(null);
 
     // State for Add Department
     const [showAddDepartmentInput, setShowAddDepartmentInput] = useState(false);
@@ -86,7 +86,7 @@ export default function DepartmentPage() {
             if (response.ok) {
                 setPositions(data.data); 
             } else {
-                console.error('Failed to fetch positions:', data.error);
+                console.error('Failed to fetch position list:', data.error);
                 setPositions([]);
             }
         } catch (error) {

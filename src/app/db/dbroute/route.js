@@ -174,7 +174,7 @@ export async function POST(request) {
             if (user) {
                 const token = Buffer.from(JSON.stringify({
                     id: user.UserID,
-                    email: user.Email,
+                    email: user.email,
                     exp: Date.now() + 24 * 60 * 60 * 1000,
                 })).toString('base64');
                     const response = NextResponse.json({ data: result.data});
