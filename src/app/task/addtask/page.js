@@ -184,7 +184,6 @@ export default function AddTaskPage() {
             // Convert empty string projectid to null
             projectid: formData.projectid === '' ? null : formData.projectid,
         };
-        alert(AssignerID);
         try {
             const response = await fetch('/db/dbroute', {
                 method: 'POST',

@@ -4,117 +4,89 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation"; 
 import Button from "../../components/button/button";
 
-export default function UpdateTaskPage() { // Renamed component
-        const router = useRouter();
-        const searchParams = useSearchParams();
-        const taskId = searchParams.get('id'); 
-    
-        const [personnelList, setPersonnelList] = useState([]);
-        const [projectList, setProjectList] = useState([]);
-        const [isLoading, setIsLoading] = useState(true); 
+// ⭐ FIX 1: Revised Helper function to format ISO date to YYYY-MM-DD
+// Uses UTC getters to ensure the local timezone doesn't shift the date 
+// when the stored time is midnight (e.g., "2025-12-15T00:00:00.000Z").
+const formatIsoToDateInput = (isoString) => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
         
-            const [isSubmitting, setIsSubmitting] = useState(false); 
-            const [message, setMessage] = useState('');
-    
-        const [formData, setFormData] = useState({
-                taskname: '',
-                taskstatus: 'To Do', // Default status
-                personnelid:'',
-                personnelname: '',
-                projectname: '',
-                description: '',
-                enddate: '', // **NEW: Due Date field**
-            });
+        // Use UTC getters to reliably get the YYYY-MM-DD part from the UTC timestamp
+        // This prevents the date from shifting backwards due to local timezone offset
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+        const day = String(date.getUTCDate()).padStart(2, '0');
         
-            //auth bundle
-                    const [AssignerID, setAssignerID] = useState(null);
-                    useEffect(() => {
-                            const checkAuth = async () => {
-                                try {
-                                    const response = await fetch('../api/auth/check', { credentials: 'include' });
-                                    if (!response.ok) {
-                                        router.replace('/signin');
-                                        return;
-                                    }
-                                    const data = await response.json();
-                                    setAssignerID(data.user);
-                                } catch (error) {
-                                    console.error('Auth check failed:', error);
-                                    router.replace('/signin');
-                                }
-                            };
-                            checkAuth();
-                        }, [router]);
-                    
-                    //authorization bundle
-                    const [authorization, setAuthorization] = useState('');
-                
-                    //fetch perms
-                    useEffect(() => {
-                        if (!AssignerID) return;
-                
-                        const fetchAuthorization = async () => {
-                        const authorizationResponse = await fetch('/db/dbroute', {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                            operation: 'authorization',
-                            params: { id: AssignerID }
-                      })
-                    });
-                
-                    const result = await authorizationResponse.json();
-                    setAuthorization(result.data);
-                  };
-                  fetchAuthorization();
-                  }, [AssignerID]);
-                
-                  //reroute for personnels
-                  useEffect(() => {
-                    if (!authorization) return;  // Wait until authorization is set
-                
-                    if (authorization.ispersonnel == 1) {
-                        router.replace('/personal');
-                    }
-                }, [authorization, router]);
-                
-                  //reroute for specific perms
-                  useEffect(() => {
-                    if (!authorization) return;  // Wait until authorization is set
-                
-                    if (authorization.workpermission == 0) {
-                        router.replace('/task');
-                    }
-                }, [authorization, router]);
+        return `${year}-${month}-${day}`;
+        
+    } catch (e) {
+        console.error("Error formatting date string:", e);
+        // Fallback to the original split method if Date object creation fails
+        try {
+            return isoString.split('T')[0];
+        } catch (e) {
+            return '';
+        }
+    }
+};
 
-        //fetch assigner id
-            useEffect(() => {
-                    const checkAuth = async () => {
-                        try {
-                            const response = await fetch('../api/auth/check', { credentials: 'include' });
-                            if (!response.ok) {
-                                router.replace('/signin');
-                                return;
-                            }
-                            const data = await response.json();
+export default function UpdateTaskPage() { 
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const taskId = searchParams.get('id'); 
+    
+    const [personnelList, setPersonnelList] = useState([]);
+    const [projectList, setProjectList] = useState([]);
+    const [isLoading, setIsLoading] = useState(true); 
+    
+    const [isSubmitting, setIsSubmitting] = useState(false); 
+    const [message, setMessage] = useState('');
+
+    const [formData, setFormData] = useState({
+        taskname: '',
+        taskstatus: 'To Do', // Default status
+        personnelid:'',
+        projectid: '', // Use projectid for the select field
+        description: '',
+        enddate: '', // Due Date field
+        assignerid: '', // Added assignerid to formData state
+    });
+    
+    // --- Auth and Permissions ---
+    // fetch assigner id
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const response = await fetch('../api/auth/check', { credentials: 'include' });
+                if (!response.ok) {
+                    router.replace('/signin');
+                    return;
+                }
+                const data = await response.json();
                 if (data.user) {
                     setFormData(prev => ({
                         ...prev,
                         assignerid: data.user.toString() // Assuming data.user is the ID
                     }));
                 }
-                        } catch (error) {
-                            console.error('Auth check failed:', error);
-                            router.replace('/signin');
-                        }
-                    };
-                    checkAuth();
-                }, [router]);
-                
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                router.replace('/signin');
+            }
+        };
+        checkAuth();
+    }, [router]);
+    
+    // --- Data Fetching ---
     useEffect(() => {
         const fetchDependencies = async () => {
             let taskData = null;
+            if (!taskId) {
+                setMessage('Error: No Task ID provided.');
+                setIsLoading(false);
+                return;
+            }
             try {
                 // 0. Fetch Specific Task Data
                 const taskResponse = await fetch('/db/dbroute', {
@@ -126,7 +98,7 @@ export default function UpdateTaskPage() { // Renamed component
                 if (taskResponse.ok && data.success) {
                     taskData = data.data;
                 } else {
-                    console.error('Error fetching task:', taskData.error);
+                    console.error('Error fetching task:', data.error);
                 }
 
                 // 1. Fetch All Personnel Active
@@ -137,13 +109,12 @@ export default function UpdateTaskPage() { // Renamed component
                 });
                 const personnelData = await personnelResponse.json();
 
-                let defaultPersonnelId = '';
                 if (personnelResponse.ok && personnelData.success && personnelData.data.length > 0) {
                     setPersonnelList(personnelData.data);
-                    defaultPersonnelId = personnelData.data[0].userid.toString();
                 } else if (!personnelResponse.ok || !personnelData.success) {
                     console.error('Error fetching personnel:', personnelData.error || personnelResponse.statusText);
                 }
+                
                 // 2. Fetch All Projects
                 const projectResponse = await fetch('/db/dbroute', {
                     method: 'POST',
@@ -155,42 +126,41 @@ export default function UpdateTaskPage() { // Renamed component
                 if (projectResponse.ok && projectData.success && projectData.data.length > 0) {
                     setProjectList(projectData.data);
                 } else if (!projectResponse.ok || !projectData.success) {
-                     console.error('Error fetching projects:', projectData.error || projectResponse.statusText);
+                    console.error('Error fetching projects:', projectData.error || projectResponse.statusText);
                 }
 
                 if (taskData) {
-                // Map fetched data to form state, including the newly fetched positionid
-                setFormData({
-                taskname: taskData.taskname,
-                taskstatus: taskData.taskstatus, 
-                personnelid: taskData.personnelid,
-                personnelname: taskData.name,
-                projectname: taskData.projectname,
-                projectid: taskData.projectid,
-                description: taskData.description,
-                enddate: taskData.enddate || null,
-                });
-            }
-            else{
-                setMessage('Task details not found or could not be loaded.');
-                setFormData(false);
-            }
-         } catch (error) {
+                    // Map fetched data to form state, using the fixed date format
+                    setFormData(prev => ({ 
+                        ...prev,
+                        taskname: taskData.taskname,
+                        taskstatus: taskData.taskstatus, 
+                        personnelid: taskData.personnelid?.toString() || '', 
+                        projectid: taskData.projectid?.toString() || '', 
+                        description: taskData.description || '',
+                        // Apply the fixed format here
+                        enddate: taskData.enddate ? formatIsoToDateInput(taskData.enddate) : '',
+                    }));
+                }
+                else{
+                    setMessage('Task details not found or could not be loaded.');
+                }
+            } catch (error) {
                 console.error('Fetch dependencies error:', error);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchDependencies();
-    }, [taskId]); // Re-run effect if taskId changes
+    }, [taskId]); 
 
-    // --- Form Fields Definition (Remains the same as AddTaskPage) ---
+    // --- Form Fields Definition ---
     const fields = [
         { label: "Task Name", name: "taskname", type: "text", required: true },
         { label: "Task Status", name: "taskstatus", type: "select", options: ["To Do", "In Progress", "Completed"], required: true },
         { label: "Assigned Personnel", name: "personnelid", type: "select-dynamic-personnel", required: true },
         { label: "Related Project", name: "projectid", type: "select-dynamic-project", required: false },
-        { label: "Due Date", name: "enddate", type: "date", required: false }, // **NEW FIELD**
+        { label: "Due Date", name: "enddate", type: "date", required: false }, 
         { label: "Description", name: "description", type: "textarea", required: false },
     ];
 
@@ -218,6 +188,27 @@ export default function UpdateTaskPage() { // Renamed component
             setIsSubmitting(false);
             return;
         }
+
+        // ⭐ CRITICAL FIX: Send only YYYY-MM-DD string to the database 
+        // to satisfy the SQL DATE column type.
+        let enddateSubmission = null;
+        if (formData.enddate) {
+            // formData.enddate is already the "YYYY-MM-DD" string from the date input.
+            // We just send this exact string.
+            enddateSubmission = formData.enddate; 
+        }
+
+        const dataToSubmit = {
+            taskname: formData.taskname,
+            taskstatus: formData.taskstatus,
+            personnelid: formData.personnelid,
+            description: formData.description,
+            enddate: enddateSubmission, // <--- Sends "YYYY-MM-DD"
+            // Convert empty string projectid to null for SQL compatibility
+            projectid: formData.projectid === '' ? null : formData.projectid,
+            assignerid: formData.assignerid, 
+        };
+        
         try {
             const response = await fetch('/db/dbroute', {
                 method: 'POST',
@@ -226,11 +217,10 @@ export default function UpdateTaskPage() { // Renamed component
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    // ⭐ The operation changes to 'updateTask'
                     operation: 'updateTask', 
                     params: {
-                        id: taskId, // ⭐ Pass the Task ID
-                        data: formData, // Pass all updated task data
+                        id: taskId, 
+                        data: dataToSubmit, 
                     },
                 }),
             });
@@ -256,25 +246,24 @@ export default function UpdateTaskPage() { // Renamed component
         }
     };
 
-    // --- Render Logic: Loading & Main Form ---
-
+    // --- Loading and Error States ---
     if (isLoading) { 
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <p className="text-xl font-semibold text-gray-600">Loading task details... 🔄</p>
-            </div>
-        );
+             <div className="min-h-screen flex items-center justify-center">
+                 <div className="text-xl font-medium text-gray-700">Loading Task details...</div>
+             </div>
+         );
     }
     
-    if (personnelList.length === 0) {
+    if (!taskId || (!formData.taskname && !message.includes('Task details not found'))) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <p className="text-xl font-semibold text-red-600">
-                    Cannot edit task: No personnel records found to assign to.
-                </p>
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-xl font-medium text-red-500">Error: Task details could not be loaded or are missing.</div>
             </div>
         );
     }
+
+    // --- Component Rendering ---
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -349,11 +338,11 @@ export default function UpdateTaskPage() { // Renamed component
                                             ))}
                                         </select>
                                     ) : field.type === 'select-dynamic-project' ? (
-                                        // Dynamic select for Project
+                                        // Dynamic select for Project (Using projectid)
                                         <select
                                             id={field.name}
                                             name={field.name}
-                                            value={formData[field.name]}
+                                            value={formData.projectid || ""} // Use projectid, default to "" for "No Project"
                                             onChange={handleChange}
                                             required={field.required}
                                             className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -377,12 +366,12 @@ export default function UpdateTaskPage() { // Renamed component
                                             className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     ) : (
-                                        // Standard text input for Task Name
+                                        // Standard text/date input
                                         <input
                                             id={field.name}
                                             name={field.name}
                                             type={field.type}
-                                            value={formData[field.name]}
+                                            value={formData[field.name] || ''} // Fallback to empty string for date field if it's null
                                             onChange={handleChange}
                                             required={field.required}
                                             className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
